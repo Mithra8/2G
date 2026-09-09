@@ -268,7 +268,7 @@
     <form method="dialog" class="modal" id="record-form">
       <h2 id="form-title">Add record</h2>
       <div class="form-grid" id="form-fields"></div>
-      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save record</button></div>
+      <div class="modal-actions"><button class="button" id="cancel-record" type="button">Cancel</button><button class="button primary" type="submit">Save record</button></div>
     </form>
   </dialog>
   <dialog id="photo-dialog">
@@ -283,7 +283,7 @@
       <h2>Edit profile</h2>
       <div class="form-grid"><div class="form-field"><label for="profile-name">Full name</label><input id="profile-name" name="name" required maxlength="80" placeholder="Enter your name"></div><div class="form-field"><label for="profile-nickname">Nickname for greetings</label><input id="profile-nickname" name="nickname" maxlength="40" placeholder="Optional nickname"></div></div>
       <p class="privacy-note">Your profile is stored only on this device unless you connect a future cloud account.</p>
-      <div class="modal-actions"><button class="button" id="google-signin" type="button">Continue with Google</button><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save profile</button></div>
+      <div class="modal-actions"><button class="button" id="google-signin" type="button">Continue with Google</button><button class="button" id="cancel-profile" type="button">Cancel</button><button class="button primary" type="submit">Save profile</button></div>
     </form>
   </dialog>
   <dialog id="currency-dialog">
@@ -291,7 +291,7 @@
       <h2>Currency and country</h2>
       <p class="heading p">FINBUCKS detected your locale as <strong id="locale-label"></strong>. Choose the accounting currency for this workspace. Amounts are stored and displayed directly in the selected currency; no USD conversion is applied.</p>
       <div class="currency-grid" id="currency-options"></div>
-      <div class="modal-actions"><button class="button" value="cancel">Cancel</button></div>
+      <div class="modal-actions"><button class="button" id="cancel-currency" type="button">Cancel</button></div>
     </form>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
@@ -580,6 +580,9 @@
     document.getElementById('align-statement').addEventListener('click', alignStatement);
     document.getElementById('cancel-photo').addEventListener('click', () => { pendingStatement = null; photoDialog.close(); });
     photoForm.addEventListener('submit', event => { event.preventDefault(); alignStatement(); });
+    document.getElementById('cancel-record').addEventListener('click', () => { dialog.close(); });
+    document.getElementById('cancel-profile').addEventListener('click', () => { profileDialog.close(); });
+    document.getElementById('cancel-currency').addEventListener('click', () => { currencyDialog.close(); });
     document.getElementById('photo-import').addEventListener('click', () => photoInput.click());
     document.getElementById('run-automation').addEventListener('click', () => {
       let updated = 0;
