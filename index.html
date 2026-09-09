@@ -452,7 +452,7 @@
         document.querySelector('.breadcrumb strong').textContent = 'Exports';
         dataPage.classList.add('visible');
         const statements = state.statementFiles.map((file, index) => `<div class="export-item"><span><strong>${file.name}</strong><small>Imported ${new Date(file.importedAt).toLocaleString()} · ${file.rows} aligned rows</small></span><button class="button" data-download-statement="${index}">Download statement</button></div>`).join('');
-        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Exports & statement files</h2><p>Download accounting data or original statement files imported into FINBUCKS.</p></div><div class="data-actions"><input class="filename-input" id="export-filename" value="finbucks-export" aria-label="Export file name"><button class="button" data-export-json>Download full backup</button></div></div><div class="panel"><div class="panel-heading"><h2>Accounting exports</h2></div><div class="quick-links"><button class="quick-link" data-export-page="transactions">Transactions CSV</button><button class="quick-link" data-export-page="expenses">Expenses CSV</button><button class="quick-link" data-export-page="ledger">Ledger CSV</button><button class="quick-link" data-export-page="accounts-payable">Payables CSV</button></div><div class="panel-heading" style="margin-top:26px"><h2>Imported statement files</h2></div><div class="export-list">${statements || '<div class="empty">No statement files imported yet.</div>'}</div></div>`;
+        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Exports & statement files</h2><p>Download accounting data or original statement files imported into FINBUCKS.</p></div><div class="data-actions"><input class="filename-input" id="export-filename" value="finbucks-export" aria-label="Export file name"><button class="button" data-export-json>Download full backup</button></div></div><div class="panel"><div class="panel-heading"><h2>Accounting exports</h2></div><div class="quick-links"><button class="quick-link" data-export-page="transactions">Transactions CSV</button><button class="quick-link" data-export-page="expenses">Expenses CSV</button><button class="quick-link" data-export-page="ledger">Ledger CSV</button><button class="quick-link" data-export-page="accounts-payable">Payables CSV</button></div><div class="panel-heading" style="margin-top:26px"><h2>Excel and Tally downloads</h2></div><div class="quick-links"><button class="quick-link" data-export-excel="transactions">Excel workbook</button><button class="quick-link" data-export-tally="transactions">Tally XML</button><button class="quick-link" data-export-excel="ledger">Ledger Excel</button><button class="quick-link" data-export-tally="ledger">Ledger Tally XML</button></div><div class="panel-heading" style="margin-top:26px"><h2>Imported statement files</h2></div><div class="export-list">${statements || '<div class="empty">No statement files imported yet.</div>'}</div></div>`;
         return;
       }
       const [title, description, columns, keys] = pageConfig[page];
@@ -464,7 +464,7 @@
         return groups;
       }, {});
       const rows = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([category, records]) => `<tr class="category-row"><td colspan="${columns.length + 1}">${category} · ${records.length} ${records.length === 1 ? 'entry' : 'entries'}</td></tr>${records.map(({record, index}) => `<tr>${keys.map(key => `<td>${key === 'amount' || key === 'value' || key === 'balance' || key === 'limit' || key === 'spent' || key === 'debit' || key === 'credit' ? money(record[key]) : (record[key] || '—')}</td>`).join('')}<td><span class="row-actions"><button class="icon-action" data-edit="${index}">Edit</button><button class="icon-action" data-delete="${index}">Delete</button></span></td></tr>`).join('')}`).join('');
-      dataPage.innerHTML = `<div class="data-toolbar"><div><h2>${title}</h2><p>${description} Monetary values are entered and stored directly in ${localeCurrency()}. Records are grouped by category.</p></div><div class="data-actions"><button class="button" data-export>Export CSV</button><button class="button primary" data-add>Add record</button></div></div><div class="panel table-wrap"><table><thead><tr>${columns.map(column => `<th>${column}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${rows || `<tr><td class="empty" colspan="${columns.length + 1}">No records yet. Add your first record.</td></tr>`}</tbody></table></div>`;
+      dataPage.innerHTML = `<div class="data-toolbar"><div><h2>${title}</h2><p>${description} Monetary values are entered and stored directly in ${localeCurrency()}. Records are grouped by category.</p></div><div class="data-actions"><button class="button" data-export>Export CSV</button><button class="button" data-export-excel="${page}">Excel</button><button class="button" data-export-tally="${page}">Tally XML</button><button class="button primary" data-add>Add record</button></div></div><div class="panel table-wrap"><table><thead><tr>${columns.map(column => `<th>${column}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${rows || `<tr><td class="empty" colspan="${columns.length + 1}">No records yet. Add your first record.</td></tr>`}</tbody></table></div>`;
     }
     function openForm(index = null) {
       editingIndex = index;
@@ -479,7 +479,8 @@
       const [title, , columns, keys] = pageConfig[currentPage];
       const csv = [columns, ...state[currentPage].map(record => keys.map(key => `"${String(record[key] || '').replace(/"/g, '""')}"`))].map(row => row.join(',')).join('\n');
       const baseName = (document.getElementById('export-filename')?.value || title).trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
-      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); link.download = `${baseName || title.toLowerCase().replace(/ /g, '-')}.csv`; link.click(); URL.revokeObjectURL(link.href); toast(`${title} exported`);
+      downloadData(`${baseName || title.toLowerCase().replace(/ /g, '-')}.csv`, csv, 'text/csv;charset=utf-8');
+      toast(`${title} CSV downloaded to your device`);
     }
     function exportAllCsv() {
       Object.keys(pageConfig).forEach(page => {
@@ -490,7 +491,31 @@
       toast('All accounting sheets exported');
     }
     function downloadData(filename, data, type) {
-      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+      const url = URL.createObjectURL(new Blob([data], {type}));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { URL.revokeObjectURL(url); link.remove(); }, 1000);
+    }
+    function exportExcel(page) {
+      const [title, , columns, keys] = pageConfig[page];
+      const rows = state[page].map(record => `<tr>${keys.map(key => `<td>${String(record[key] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('');
+      const workbook = `<html><head><meta charset="utf-8"><style>td,th{border:1px solid #999;padding:6px}th{background:#e7ebf1}</style></head><body><h2>${title}</h2><table><thead><tr>${columns.map(column => `<th>${column}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></body></html>`;
+      downloadData(`finbucks-${page}.xls`, workbook, 'application/vnd.ms-excel');
+      toast(`${title} Excel file downloaded to your device`);
+    }
+    function escapeXml(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    }
+    function exportTally(page) {
+      const [title, , columns, keys] = pageConfig[page];
+      const entries = state[page].map(record => `<TALLYMESSAGE><LEDGER NAME="${escapeXml(record.account || record.vendor || record.description || title)}"><NAME>${escapeXml(record.account || record.vendor || record.description || title)}</NAME><ISBILLWISEON>No</ISBILLWISEON><DESCRIPTION>${escapeXml(keys.map(key => `${key}: ${record[key] || ''}`).join(' | '))}</DESCRIPTION><AMOUNT>${escapeXml(record.amount || record.value || record.balance || record.debit || record.credit || '0')}</AMOUNT></LEDGER></TALLYMESSAGE>`).join('');
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+      downloadData(`finbucks-${page}-tally.xml`, xml, 'application/xml;charset=utf-8');
+      toast(`${title} Tally XML downloaded to your device`);
     }
     function runAssistant(prompt) {
       const query = prompt.toLowerCase();
@@ -508,6 +533,8 @@
       if (event.target.matches('[data-export-all]')) exportAllCsv();
       if (event.target.matches('[data-export-json]')) { const baseName = (document.getElementById('export-filename')?.value || 'finbucks-backup').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-'); downloadData(`${baseName || 'finbucks-backup'}.json`, JSON.stringify(state, null, 2), 'application/json'); toast('Full backup downloaded'); }
       if (event.target.matches('[data-export-page]')) { currentPage = event.target.dataset.exportPage; exportCsv(); renderPage('exports'); }
+      if (event.target.matches('[data-export-excel]')) exportExcel(event.target.dataset.exportExcel);
+      if (event.target.matches('[data-export-tally]')) exportTally(event.target.dataset.exportTally);
       const statement = event.target.closest('[data-download-statement]');
       if (statement) { const file = state.statementFiles[Number(statement.dataset.downloadStatement)]; if (file) { const link = document.createElement('a'); link.href = file.dataUrl; link.download = file.name; link.click(); toast('Statement downloaded'); } }
       if (event.target.matches('[data-add]')) openForm();
@@ -596,7 +623,7 @@
           state.ledger.push({date: item.date, account: item.category, debit: amount < 0 ? String(Math.abs(amount)) : '0', credit: amount > 0 ? String(amount) : '0'}); updated++;
         }
       });
-      persist(); refreshSummary(); toast(updated ? `Automation updated ${updated} entries` : 'Everything is already up to date');
+      persist(); refreshSummary(); renderPage(currentPage === 'overview' ? 'overview' : currentPage); toast(updated ? `Automation updated ${updated} entries` : 'Everything is already up to date');
     });
     document.getElementById('overview-export').addEventListener('click', () => { currentPage = 'transactions'; exportCsv(); currentPage = 'overview'; });
     document.querySelector('.button.primary').addEventListener('click', event => { if (currentPage === 'overview') { event.preventDefault(); currentPage = 'transactions'; renderPage('transactions'); openForm(); } });
