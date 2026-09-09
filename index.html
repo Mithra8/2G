@@ -163,6 +163,18 @@
     td:last-child, th:last-child { text-align: right; }
     .category-row td { padding: 10px 12px 7px; border-bottom: 0; background: #f6f8ff; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
     .category-row:first-child td { padding-top: 13px; }
+    .balance-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .balance-side { min-width: 0; }
+    .balance-side h3 { margin: 0 0 12px; color: var(--navy); font-size: 14px; }
+    .balance-total { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--navy); font-weight: 800; }
+    .change-highlight { border-radius: 4px; font-weight: 700; }
+    .highlight-a { background: #fff1c7; }
+    .highlight-b { background: #dff7ee; }
+    .highlight-c { background: #e8e1ff; }
+    .highlight-d { background: #ffe1e8; }
+    .file-picker { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px dashed #9aa8c5; border-radius: 8px; color: var(--blue); background: var(--blue-soft); cursor: pointer; font-weight: 650; }
+    .file-picker:hover { border-color: var(--blue); }
+    @media (max-width: 700px) { .balance-columns { grid-template-columns: 1fr; } }
     .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
     .icon-action { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--blue); background: #fff; font-size: 12px; }
     .empty { padding: 32px; color: var(--muted); text-align: center; }
@@ -259,7 +271,7 @@
       <section class="content" id="app-content">
         <div class="heading">
           <div><h1><span id="time-greeting">Good morning</span>, <span id="profile-greeting">there</span></h1><p id="perspective-subtitle">Developer workspace for accounting operations and customer support.</p></div>
-          <div class="heading-actions"><button class="button" id="photo-import">▧ Import data</button><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" hidden><button class="button developer-only" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary customer-action">＋ Add transaction</button></div>
+          <div class="heading-actions"><label class="file-picker" for="photo-input">▧ Choose file</label><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" hidden><button class="button" id="photo-import">Import data</button><button class="button developer-only" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary customer-action">＋ Add transaction</button></div>
         </div>
         <div class="summary-grid overview-only">
           <article class="card"><div class="card-label">Total balance</div><div class="card-value">$24,580.00</div><div class="trend positive">↗ 8.4% from last month</div></article>
@@ -509,6 +521,7 @@
       document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
       document.querySelectorAll('.overview-only').forEach(el => el.style.display = page === 'overview' ? '' : 'none');
       if (page === 'overview') { dataPage.classList.remove('visible'); document.querySelector('.breadcrumb strong').textContent = 'Overview'; refreshSummary(); renderPortfolioGraph(document.getElementById('portfolio-preview')); return; }
+      if (page === 'balance-sheet') { document.querySelector('.breadcrumb strong').textContent = 'Balance sheet'; dataPage.classList.add('visible'); renderBalanceSheet(); return; }
       if (page === 'accounting-sheets') {
         document.querySelector('.breadcrumb strong').textContent = 'All accounting sheets';
         dataPage.classList.add('visible');
@@ -552,6 +565,25 @@
     const exportCategory = record => String(record.category || record.type || record.account || record.asset || record.vendor || 'Uncategorized').trim() || 'Uncategorized';
     const escapeHtml = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const exportNumberKeys = ['amount', 'value', 'balance', 'limit', 'spent', 'debit', 'credit', 'book', 'statement', 'period', 'expense', 'bookValue', 'income', 'expenses', 'profit', 'change'];
+    function balanceSheetTotals() {
+      const assets = [
+        ...state.assets.map(item => ({name: item.name || 'Asset', value: Number(item.value) || 0, adjustment: ''})),
+        ...state['current-assets'].map(item => ({name: item.name || item.account || 'Current asset', value: Number(item.balance) || 0, adjustment: ''})),
+        ...state.depreciation.map(item => ({name: `${item.asset || 'Asset'} (net)`, value: Number(item.bookValue) || Math.max(0, (Number(item.value) || 0) - (Number(item.expense) || 0)), adjustment: 'Depreciation applied'})),
+        ...state.amortization.map(item => ({name: `${item.asset || 'Deferred cost'} (remaining)`, value: Number(item.remaining) || 0, adjustment: 'Amortization applied'}))
+      ];
+      const liabilities = [
+        ...state.liabilities.map(item => ({name: item.name || 'Liability', value: Number(item.balance) || 0, adjustment: ''})),
+        ...state['accounts-payable'].map(item => ({name: item.vendor || 'Payable', value: Number(item.amount) || 0, adjustment: ''})),
+        ...state.equity.map(item => ({name: item.description || item.account || 'Stockholders equity', value: Number(item.amount) || 0, adjustment: ''}))
+      ];
+      return {assets, liabilities, assetTotal: assets.reduce((sum, item) => sum + item.value, 0), liabilityTotal: liabilities.reduce((sum, item) => sum + item.value, 0)};
+    }
+    function renderBalanceSheet() {
+      const totals = balanceSheetTotals();
+      const side = (items, total, title, offset) => `<div class="balance-side"><h3>${title}</h3><table><thead><tr><th>Account</th><th>Amount</th></tr></thead><tbody>${items.map((item, index) => `<tr class="change-highlight highlight-${['a', 'b', 'c', 'd'][(index + offset) % 4]}"><td>${escapeHtml(item.name)}${item.adjustment ? `<small class="privacy-note"> · ${escapeHtml(item.adjustment)}</small>` : ''}</td><td>${money(item.value)}</td></tr>`).join('') || '<tr><td colspan="2" class="empty">No records</td></tr>'}</tbody></table><div class="balance-total"><span>Total ${title}</span><span>${money(total)}</span></div></div>`;
+      dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Balance sheet</h2><p>Assets are shown separately from liabilities and stockholders’ equity. Depreciation and amortization are reflected in adjusted asset values.</p></div><div class="data-actions"><button class="button" data-export>Export CSV</button><button class="button" data-export-excel="balance-sheet">Excel</button><button class="button" data-export-tally="balance-sheet">Tally XML</button></div></div><div class="panel"><div class="balance-columns">${side(totals.assets, totals.assetTotal, 'Assets', 0)}${side(totals.liabilities, totals.liabilityTotal, 'Liabilities & stockholders’ equity', 2)}</div><div class="balance-total"><span>Balance check (Assets − Liabilities & Equity)</span><span class="${Math.abs(totals.assetTotal - totals.liabilityTotal) < 0.01 ? 'positive' : 'negative'}">${money(totals.assetTotal - totals.liabilityTotal)}</span></div></div>`;
+    }
     function exportAllCsv() {
       Object.keys(pageConfig).forEach(page => {
         currentPage = page;
@@ -572,7 +604,10 @@
     }
     function exportExcel(page) {
       const [title, , columns, keys] = pageConfig[page];
-      const groups = state[page].reduce((result, record) => {
+      const records = page === 'balance-sheet'
+        ? (() => { const totals = balanceSheetTotals(); return [...totals.assets.map(item => ({account: item.name, type: 'Asset', debit: String(item.value), credit: '0'})), ...totals.liabilities.map(item => ({account: item.name, type: 'Liability / Equity', debit: '0', credit: String(item.value)}))]; })()
+        : state[page];
+      const groups = records.reduce((result, record) => {
         const category = exportCategory(record);
         (result[category] ||= []).push(record);
         return result;
@@ -584,7 +619,7 @@
         const totalCell = categoryTotal ? `<span class="category-total">Category total: ${escapeHtml(money(categoryTotal))}</span>` : '';
         return `<tr class="category"><td colspan="${columns.length}">${escapeHtml(category)} <span class="count">${records.length} ${records.length === 1 ? 'entry' : 'entries'}</span>${totalCell}</td></tr>${categoryRows}`;
       }).join('');
-      const overallTotal = state[page].reduce((sum, record) => sum + keys.reduce((rowTotal, key) => rowTotal + (exportNumberKeys.includes(key) ? (Number(record[key]) || 0) : 0), 0), 0);
+      const overallTotal = records.reduce((sum, record) => sum + keys.reduce((rowTotal, key) => rowTotal + (exportNumberKeys.includes(key) ? (Number(record[key]) || 0) : 0), 0), 0);
       const generated = new Date().toLocaleString();
       const workbook = `<html><head><meta charset="utf-8"><style>
         @page{size:landscape;margin:.5in}body{font-family:Segoe UI,Arial,sans-serif;color:#172233;margin:24px}
@@ -593,7 +628,7 @@
         th{background:#15213b;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em}.category td{background:#edf1ff;color:#2946bd;font-weight:800;font-size:12px}
         .count{float:right;color:#788397;font-weight:600}.category-total{float:right;margin-right:18px;color:#172233;font-weight:700}.number{text-align:right;mso-number-format:"#,##0.00"}
         .summary{margin:0 0 16px;padding:12px 14px;border:1px solid #d9dfeb;background:#f7f8fb}.footer{margin-top:16px;color:#788397;font-size:11px}
-      </style></head><body><div class="brand">ASLI PAISA</div><h1>${escapeHtml(title)} — Categorized export</h1><div class="subtitle">Prepared ${escapeHtml(generated)} · Base currency: ${escapeHtml(localeCurrency())}</div><div class="summary"><strong>${state[page].length}</strong> records organized into <strong>${orderedGroups.length}</strong> categories${overallTotal ? ` · Overall numeric total: <strong>${escapeHtml(money(overallTotal))}</strong>` : ''}</div><table><thead><tr>${columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${columns.length}">No records available</td></tr>`}</tbody></table><div class="footer">Generated by Asli Paisa. Review categorized entries before posting to an accounting system.</div></body></html>`;
+      </style></head><body><div class="brand">ASLI PAISA</div><h1>${escapeHtml(title)} — Categorized export</h1><div class="subtitle">Prepared ${escapeHtml(generated)} · Base currency: ${escapeHtml(localeCurrency())}</div><div class="summary"><strong>${records.length}</strong> records organized into <strong>${orderedGroups.length}</strong> categories${overallTotal ? ` · Overall numeric total: <strong>${escapeHtml(money(overallTotal))}</strong>` : ''}</div><table><thead><tr>${columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${columns.length}">No records available</td></tr>`}</tbody></table><div class="footer">Generated by Asli Paisa. Review categorized entries before posting to an accounting system.</div></body></html>`;
       downloadData(`asli-paisa-${page}-categorized.xls`, workbook, 'application/vnd.ms-excel');
       toast(`${title} Excel workbook downloaded with categories and totals`);
     }
