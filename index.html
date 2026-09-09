@@ -522,6 +522,10 @@
       document.querySelectorAll('.overview-only').forEach(el => el.style.display = page === 'overview' ? '' : 'none');
       if (page === 'overview') { dataPage.classList.remove('visible'); document.querySelector('.breadcrumb strong').textContent = 'Overview'; refreshSummary(); renderPortfolioGraph(document.getElementById('portfolio-preview')); return; }
       if (page === 'balance-sheet') { document.querySelector('.breadcrumb strong').textContent = 'Balance sheet'; dataPage.classList.add('visible'); renderBalanceSheet(); return; }
+      if (page === 'trial-balance') { document.querySelector('.breadcrumb strong').textContent = 'Trial balance'; dataPage.classList.add('visible'); renderTrialBalance(); return; }
+      if (page === 'profit-loss') { document.querySelector('.breadcrumb strong').textContent = 'Profit & loss'; dataPage.classList.add('visible'); renderProfitLoss(); return; }
+      if (page === 'reconciliation') { document.querySelector('.breadcrumb strong').textContent = 'Reconciliation'; dataPage.classList.add('visible'); renderReconciliation(); return; }
+      if (page === 'final-balance') { document.querySelector('.breadcrumb strong').textContent = 'Final balance'; dataPage.classList.add('visible'); renderFinalBalance(); return; }
       if (page === 'accounting-sheets') {
         document.querySelector('.breadcrumb strong').textContent = 'All accounting sheets';
         dataPage.classList.add('visible');
@@ -583,6 +587,33 @@
       const totals = balanceSheetTotals();
       const side = (items, total, title, offset) => `<div class="balance-side"><h3>${title}</h3><table><thead><tr><th>Account</th><th>Amount</th></tr></thead><tbody>${items.map((item, index) => `<tr class="change-highlight highlight-${['a', 'b', 'c', 'd'][(index + offset) % 4]}"><td>${escapeHtml(item.name)}${item.adjustment ? `<small class="privacy-note"> · ${escapeHtml(item.adjustment)}</small>` : ''}</td><td>${money(item.value)}</td></tr>`).join('') || '<tr><td colspan="2" class="empty">No records</td></tr>'}</tbody></table><div class="balance-total"><span>Total ${title}</span><span>${money(total)}</span></div></div>`;
       dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Balance sheet</h2><p>Assets are shown separately from liabilities and stockholders’ equity. Depreciation and amortization are reflected in adjusted asset values.</p></div><div class="data-actions"><button class="button" data-export>Export CSV</button><button class="button" data-export-excel="balance-sheet">Excel</button><button class="button" data-export-tally="balance-sheet">Tally XML</button></div></div><div class="panel"><div class="balance-columns">${side(totals.assets, totals.assetTotal, 'Assets', 0)}${side(totals.liabilities, totals.liabilityTotal, 'Liabilities & stockholders’ equity', 2)}</div><div class="balance-total"><span>Balance check (Assets − Liabilities & Equity)</span><span class="${Math.abs(totals.assetTotal - totals.liabilityTotal) < 0.01 ? 'positive' : 'negative'}">${money(totals.assetTotal - totals.liabilityTotal)}</span></div></div>`;
+    }
+    function statementToolbar(title, description, page) {
+      return `<div class="data-toolbar"><div><h2>${title}</h2><p>${description}</p></div><div class="data-actions"><button class="button" data-export-excel="${page}">Excel</button><button class="button" data-export-tally="${page}">Tally XML</button><button class="button primary" data-add>Add record</button></div></div>`;
+    }
+    function renderTrialBalance() {
+      const records = state['trial-balance'];
+      const debit = records.reduce((sum, item) => sum + (Number(item.debit) || 0), 0);
+      const credit = records.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
+      const rows = records.map((item, index) => `<tr class="highlight-${['a', 'b', 'c', 'd'][index % 4]}"><td>${escapeHtml(item.account)}</td><td>${money(item.debit)}</td><td>${money(item.credit)}</td><td>${Math.abs(Number(item.debit || 0) - Number(item.credit || 0)) < .01 ? 'Balanced' : 'Review'}</td></tr>`).join('');
+      dataPage.innerHTML = `${statementToolbar('Trial balance', 'Debits and credits are grouped by account and checked for equality.', 'trial-balance')}<div class="panel table-wrap"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th>Status</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">No trial balance records</td></tr>'}</tbody><tfoot><tr><th>Total</th><th>${money(debit)}</th><th>${money(credit)}</th><th class="${Math.abs(debit - credit) < .01 ? 'positive' : 'negative'}">${Math.abs(debit - credit) < .01 ? 'Balanced' : `Difference ${money(debit - credit)}`}</th></tr></tfoot></table></div>`;
+    }
+    function renderProfitLoss() {
+      const records = state['profit-loss'];
+      const income = records.reduce((sum, item) => sum + (Number(item.income) || 0), 0);
+      const expenses = records.reduce((sum, item) => sum + (Number(item.expenses) || 0), 0);
+      dataPage.innerHTML = `${statementToolbar('Profit & loss', 'Income, expenses, and net profit are presented as a period summary.', 'profit-loss')}<div class="summary-grid"><article class="card"><div class="card-label">Total income</div><div class="card-value">${money(income)}</div></article><article class="card"><div class="card-label">Total expenses</div><div class="card-value">${money(expenses)}</div></article><article class="card"><div class="card-label">Net profit</div><div class="card-value ${income - expenses >= 0 ? 'positive' : 'negative'}">${money(income - expenses)}</div></article></div><div class="panel table-wrap"><table><thead><tr><th>Period</th><th>Income</th><th>Expenses</th><th>Net profit</th></tr></thead><tbody>${records.map(item => `<tr><td>${escapeHtml(item.period)}</td><td>${money(item.income)}</td><td>${money(item.expenses)}</td><td>${money(item.profit || Number(item.income || 0) - Number(item.expenses || 0))}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No profit and loss records</td></tr>'}</tbody></table></div>`;
+    }
+    function renderReconciliation() {
+      const records = state.reconciliation;
+      const matched = records.filter(item => Math.abs(Number(item.book || 0) - Number(item.statement || 0)) < .01);
+      dataPage.innerHTML = `${statementToolbar('Reconciliation', 'Book amounts are compared with statement amounts and exceptions are highlighted.', 'reconciliation')}<div class="quick-links"><span class="quick-link">${matched.length} matched</span><span class="quick-link">${records.length - matched.length} exceptions</span></div><div class="panel table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Book amount</th><th>Statement amount</th><th>Status</th></tr></thead><tbody>${records.map((item, index) => { const isMatched = Math.abs(Number(item.book || 0) - Number(item.statement || 0)) < .01; return `<tr class="${isMatched ? 'highlight-b' : `highlight-${['a', 'c', 'd'][index % 3]}`}"><td>${escapeHtml(item.date)}</td><td>${escapeHtml(item.account)}</td><td>${money(item.book)}</td><td>${money(item.statement)}</td><td class="${isMatched ? 'positive' : 'negative'}">${isMatched ? 'Matched' : 'Exception'}</td></tr>`; }).join('') || '<tr><td colspan="5" class="empty">No reconciliation records</td></tr>'}</tbody></table></div>`;
+    }
+    function renderFinalBalance() {
+      const records = state['final-balance'];
+      const debit = records.reduce((sum, item) => sum + (Number(item.debit) || 0), 0);
+      const credit = records.reduce((sum, item) => sum + (Number(item.credit) || 0), 0);
+      dataPage.innerHTML = `${statementToolbar('Final balance', 'Closing account balances after adjustments and period-end entries.', 'final-balance')}<div class="panel table-wrap"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th><th>Closing balance</th></tr></thead><tbody>${records.map(item => `<tr><td>${escapeHtml(item.account)}</td><td>${money(item.debit)}</td><td>${money(item.credit)}</td><td>${money(item.balance || Number(item.debit || 0) - Number(item.credit || 0))}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No closing balances</td></tr>'}</tbody><tfoot><tr><th>Total</th><th>${money(debit)}</th><th>${money(credit)}</th><th>${money(debit - credit)}</th></tr></tfoot></table></div>`;
     }
     function exportAllCsv() {
       Object.keys(pageConfig).forEach(page => {
