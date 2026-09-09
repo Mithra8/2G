@@ -81,6 +81,12 @@
     .breadcrumb { color: var(--muted); font-size: 13px; }
     .breadcrumb strong { color: var(--ink); font-weight: 650; }
     .top-actions { display: flex; align-items: center; gap: 19px; }
+    .perspective-switch { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .perspective-switch select { padding: 7px 27px 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); font-weight: 650; }
+    .customer-welcome { margin: 0 0 22px; }
+    .customer-only { display: none; }
+    .customer-mode .developer-only { display: none !important; }
+    .customer-mode .customer-only { display: block; }
     .icon-btn { position: relative; width: 32px; height: 32px; background: transparent; color: #647188; font-size: 19px; }
     .dot { position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border: 1px solid white; border-radius: 50%; background: #ee6875; }
     .top-avatar { width: 34px; height: 34px; background: #dce5ff; color: #3e5bc8; }
@@ -248,12 +254,12 @@
     <main class="main">
       <header class="topbar">
         <div class="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></div>
-        <div class="top-actions"><button class="icon-btn" id="notifications" aria-label="Notifications">♧<span class="dot"></span></button><button class="top-avatar profile-initials" id="top-profile" aria-label="Edit profile">NH</button></div>
+        <div class="top-actions"><label class="perspective-switch" for="perspective-select">View <select id="perspective-select" aria-label="Choose application perspective"><option value="developer">Developer</option><option value="customer">Customer</option></select></label><button class="icon-btn" id="notifications" aria-label="Notifications">♧<span class="dot"></span></button><button class="top-avatar profile-initials" id="top-profile" aria-label="Edit profile">NH</button></div>
       </header>
       <section class="content" id="app-content">
         <div class="heading">
-          <div><h1><span id="time-greeting">Good morning</span>, <span id="profile-greeting">Nallagatla Harikumar</span></h1><p>Here’s what’s happening with your money this month.</p></div>
-          <div class="heading-actions"><button class="button" id="photo-import">▧ Import data</button><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" hidden><button class="button" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary">＋ Add transaction</button></div>
+          <div><h1><span id="time-greeting">Good morning</span>, <span id="profile-greeting">there</span></h1><p id="perspective-subtitle">Developer workspace for accounting operations and customer support.</p></div>
+          <div class="heading-actions"><button class="button" id="photo-import">▧ Import data</button><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" hidden><button class="button developer-only" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary customer-action">＋ Add transaction</button></div>
         </div>
         <div class="summary-grid overview-only">
           <article class="card"><div class="card-label">Total balance</div><div class="card-value">$24,580.00</div><div class="trend positive">↗ 8.4% from last month</div></article>
@@ -261,6 +267,7 @@
           <article class="card"><div class="card-label">Expenses</div><div class="card-value">$3,180.00</div><div class="trend negative">↘ 2.1% from last month</div></article>
           <article class="card"><div class="card-label">Savings rate</div><div class="card-value">62.2%</div><div class="trend positive">↗ 6.8% from last month</div></article>
         </div>
+        <section class="panel customer-only customer-welcome"><div class="panel-heading"><div><h2>Customer workspace</h2><p>Review your financial position, upload statements, and download reports prepared by Asli Paisa.</p></div><button class="button primary" data-page="reports">View reports</button></div><div class="quick-links"><button class="quick-link" data-page="profit-loss">Profit & loss</button><button class="quick-link" data-page="balance-sheet">Balance sheet</button><button class="quick-link" data-page="reconciliation">Reconciliation</button><button class="quick-link" data-page="exports">Download reports</button></div></section>
         <div class="dashboard-grid overview-only">
           <section class="panel"><div class="panel-heading"><h2>Cash flow</h2><select aria-label="Cash flow period"><option>Last 6 months</option></select></div><div class="chart" aria-label="Cash flow chart"><div class="bar-group"><div class="bar" style="height: 53%"></div>Apr</div><div class="bar-group"><div class="bar" style="height: 68%"></div>May</div><div class="bar-group"><div class="bar" style="height: 47%"></div>Jun</div><div class="bar-group"><div class="bar" style="height: 79%"></div>Jul</div><div class="bar-group"><div class="bar" style="height: 61%"></div>Aug</div><div class="bar-group"><div class="bar highlight" style="height: 88%"></div>Sep</div></div></section>
           <section class="panel"><div class="panel-heading"><h2>Recent transactions</h2><button class="button" data-page="transactions">View all</button></div><div class="transaction"><span class="transaction-icon">◈</span><span class="transaction-main"><strong>Salary deposit</strong><small>Today · Income</small></span><span class="amount positive" data-base-amount="6800"></span></div><div class="transaction"><span class="transaction-icon">⌁</span><span class="transaction-main"><strong>Groceries</strong><small>Yesterday · Essentials</small></span><span class="amount" data-base-amount="-84.20"></span></div><div class="transaction"><span class="transaction-icon">◉</span><span class="transaction-main"><strong>Cloud subscription</strong><small>Sep 6 · Services</small></span><span class="amount" data-base-amount="-24"></span></div><div class="transaction"><span class="transaction-icon">◇</span><span class="transaction-main"><strong>Weekend dining</strong><small>Sep 4 · Lifestyle</small></span><span class="amount" data-base-amount="-68.50"></span></div></section>
@@ -359,6 +366,7 @@
       liabilities: [{name: 'Credit card', type: 'Short-term', balance: '9660', due: '2026-09-25'}]
     };
     const state = JSON.parse(localStorage.getItem('mitraa-finance') || '{}');
+    state.perspective = state.perspective === 'customer' ? 'customer' : 'developer';
     if (!Array.isArray(state.statementFiles)) state.statementFiles = [];
     const fallbackRates = {USD: 1, EUR: .92, GBP: .79, INR: 83.5, JPY: 149.5, CNY: 7.2, AUD: 1.52, CAD: 1.36, SGD: 1.34, AED: 3.67, SAR: 3.75, ZAR: 18.2, CHF: .88, NZD: 1.65, HKD: 7.82, KRW: 1335, BRL: 5.05, MXN: 17.2, THB: 35.7, TRY: 33.8, NOK: 10.7, SEK: 10.5, DKK: 6.85, PLN: 3.98};
     state.rates = state.rates || fallbackRates;
@@ -387,6 +395,16 @@
     ];
     const toast = message => { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200); };
     const persist = () => localStorage.setItem('mitraa-finance', JSON.stringify(state));
+    function applyPerspective() {
+      document.body.classList.toggle('customer-mode', state.perspective === 'customer');
+      document.body.classList.toggle('developer-mode', state.perspective === 'developer');
+      const selector = document.getElementById('perspective-select');
+      if (selector) selector.value = state.perspective;
+      const subtitle = document.getElementById('perspective-subtitle');
+      if (subtitle) subtitle.textContent = state.perspective === 'customer'
+        ? 'Customer view for reviewing financial statements, reports, and downloads.'
+        : 'Developer workspace for accounting operations and customer support.';
+    }
     const profileName = () => state.profileName || '';
     const profileNickname = () => state.profileNickname || profileName().split(/\s+/)[0] || 'there';
     const timeGreeting = () => {
@@ -668,6 +686,12 @@
     document.getElementById('overview-export').addEventListener('click', () => { currentPage = 'transactions'; exportCsv(); currentPage = 'overview'; });
     document.querySelector('.button.primary').addEventListener('click', event => { if (currentPage === 'overview') { event.preventDefault(); currentPage = 'transactions'; renderPage('transactions'); openForm(); } });
     document.getElementById('notifications').addEventListener('click', () => toast('No new notifications'));
+    document.getElementById('perspective-select').addEventListener('change', event => {
+      state.perspective = event.target.value === 'customer' ? 'customer' : 'developer';
+      persist();
+      applyPerspective();
+      toast(`${state.perspective === 'customer' ? 'Customer' : 'Developer'} view enabled`);
+    });
     let lastAssistantResult = '';
     document.getElementById('assistant-form').addEventListener('submit', event => {
       event.preventDefault();
@@ -714,6 +738,7 @@
       state.profileNickname = nickname || name.split(/\s+/)[0];
       persist();
       renderProfile();
+      applyPerspective();
       profileDialog.close();
       toast('Profile updated');
     });
