@@ -526,7 +526,7 @@
       document.querySelector('.breadcrumb strong').textContent = title;
       dataPage.classList.add('visible');
       const grouped = state[page].reduce((groups, record, index) => {
-        const category = record.category || record.type || record.account || 'Uncategorized';
+        const category = exportCategory(record);
         (groups[category] ||= []).push({record, index});
         return groups;
       }, {});
@@ -549,6 +549,9 @@
       downloadData(`${baseName || title.toLowerCase().replace(/ /g, '-')}.csv`, csv, 'text/csv;charset=utf-8');
       toast(`${title} CSV downloaded to your device`);
     }
+    const exportCategory = record => String(record.category || record.type || record.account || record.asset || record.vendor || 'Uncategorized').trim() || 'Uncategorized';
+    const escapeHtml = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const exportNumberKeys = ['amount', 'value', 'balance', 'limit', 'spent', 'debit', 'credit', 'book', 'statement', 'period', 'expense', 'bookValue', 'income', 'expenses', 'profit', 'change'];
     function exportAllCsv() {
       Object.keys(pageConfig).forEach(page => {
         currentPage = page;
@@ -569,10 +572,30 @@
     }
     function exportExcel(page) {
       const [title, , columns, keys] = pageConfig[page];
-      const rows = state[page].map(record => `<tr>${keys.map(key => `<td>${String(record[key] || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('');
-      const workbook = `<html><head><meta charset="utf-8"><style>td,th{border:1px solid #999;padding:6px}th{background:#e7ebf1}</style></head><body><h2>${title}</h2><table><thead><tr>${columns.map(column => `<th>${column}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></body></html>`;
-      downloadData(`finbucks-${page}.xls`, workbook, 'application/vnd.ms-excel');
-      toast(`${title} Excel file downloaded to your device`);
+      const groups = state[page].reduce((result, record) => {
+        const category = exportCategory(record);
+        (result[category] ||= []).push(record);
+        return result;
+      }, {});
+      const orderedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+      const rows = orderedGroups.map(([category, records]) => {
+        const categoryTotal = keys.reduce((sum, key) => sum + (exportNumberKeys.includes(key) ? (Number(records.reduce((total, record) => total + (Number(record[key]) || 0), 0))) : 0), 0);
+        const categoryRows = records.map(record => `<tr>${keys.map(key => `<td class="${exportNumberKeys.includes(key) ? 'number' : ''}">${escapeHtml(record[key] || '')}</td>`).join('')}</tr>`).join('');
+        const totalCell = categoryTotal ? `<span class="category-total">Category total: ${escapeHtml(money(categoryTotal))}</span>` : '';
+        return `<tr class="category"><td colspan="${columns.length}">${escapeHtml(category)} <span class="count">${records.length} ${records.length === 1 ? 'entry' : 'entries'}</span>${totalCell}</td></tr>${categoryRows}`;
+      }).join('');
+      const overallTotal = state[page].reduce((sum, record) => sum + keys.reduce((rowTotal, key) => rowTotal + (exportNumberKeys.includes(key) ? (Number(record[key]) || 0) : 0), 0), 0);
+      const generated = new Date().toLocaleString();
+      const workbook = `<html><head><meta charset="utf-8"><style>
+        @page{size:landscape;margin:.5in}body{font-family:Segoe UI,Arial,sans-serif;color:#172233;margin:24px}
+        .brand{color:#4263eb;font-size:24px;font-weight:800;letter-spacing:1px}.subtitle{color:#788397;margin:4px 0 18px}
+        table{width:100%;border-collapse:collapse;border:1px solid #cfd6e4}td,th{border:1px solid #d9dfeb;padding:9px 10px;text-align:left}
+        th{background:#15213b;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em}.category td{background:#edf1ff;color:#2946bd;font-weight:800;font-size:12px}
+        .count{float:right;color:#788397;font-weight:600}.category-total{float:right;margin-right:18px;color:#172233;font-weight:700}.number{text-align:right;mso-number-format:"#,##0.00"}
+        .summary{margin:0 0 16px;padding:12px 14px;border:1px solid #d9dfeb;background:#f7f8fb}.footer{margin-top:16px;color:#788397;font-size:11px}
+      </style></head><body><div class="brand">ASLI PAISA</div><h1>${escapeHtml(title)} — Categorized export</h1><div class="subtitle">Prepared ${escapeHtml(generated)} · Base currency: ${escapeHtml(localeCurrency())}</div><div class="summary"><strong>${state[page].length}</strong> records organized into <strong>${orderedGroups.length}</strong> categories${overallTotal ? ` · Overall numeric total: <strong>${escapeHtml(money(overallTotal))}</strong>` : ''}</div><table><thead><tr>${columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${columns.length}">No records available</td></tr>`}</tbody></table><div class="footer">Generated by Asli Paisa. Review categorized entries before posting to an accounting system.</div></body></html>`;
+      downloadData(`asli-paisa-${page}-categorized.xls`, workbook, 'application/vnd.ms-excel');
+      toast(`${title} Excel workbook downloaded with categories and totals`);
     }
     function escapeXml(value) {
       return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
