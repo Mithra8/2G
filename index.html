@@ -160,6 +160,10 @@
     .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
     .icon-action { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--blue); background: #fff; font-size: 12px; }
     .empty { padding: 32px; color: var(--muted); text-align: center; }
+    .assistant-panel { margin-bottom: 22px; padding: 18px; }
+    .assistant-form { display: flex; gap: 10px; align-items: flex-start; }
+    .assistant-form textarea { flex: 1; min-height: 54px; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fff; }
+    .assistant-result { margin-top: 12px; padding: 12px; border-radius: 8px; background: var(--blue-soft); color: var(--ink); white-space: pre-wrap; }
     dialog { width: min(500px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 12px; box-shadow: 0 24px 80px rgba(20, 34, 59, .25); }
     dialog::backdrop { background: rgba(21, 33, 59, .38); }
     .modal { padding: 24px; }
@@ -227,8 +231,13 @@
         <a class="support-link" href="https://mail.google.com/mail/?view=cm&fs=1&to=nallagatlahari0@gmail.com" target="_blank" rel="noopener noreferrer">nallagatlahari0@gmail.com ↗</a>
         <details class="support-box"><summary>Contact owner privately</summary><form class="support-form" id="support-form"><input name="subject" placeholder="Subject" required><textarea name="message" placeholder="How can we help?" required></textarea><span class="privacy-note">Opens a private Gmail draft addressed only to FINBUCKS support.</span><button type="submit">Open private support email</button></form></details>
         <a class="currency-link" href="#" id="currency-settings">◎ Currency: <span id="currency-label">USD</span></a>
-        <div class="help"><button class="profile-button" id="profile-edit" aria-label="Edit profile"><span class="avatar profile-initials">NH</span><span><span class="user-name">Nallagatla Harikumar</span><small>Free plan</small></span></button></div>
+        <div class="help"><button class="profile-button" id="profile-edit" aria-label="Set up profile"><span class="avatar profile-initials">?</span><span><span class="user-name">Set your name</span><small>Local account</small></span></button></div>
       </div>
+      <section class="panel assistant-panel overview-only">
+        <div class="panel-heading"><div><h2>FINBUCKS accounting assistant</h2><p>Ask for data from transactions, statements, assets, liabilities, expenses, ledger, equity, reports, audit, or payables.</p></div><button class="button" id="assistant-export" type="button">Export result</button></div>
+        <form class="assistant-form" id="assistant-form"><textarea id="assistant-prompt" placeholder="Try: Show all food expenses, summarize this month, or list unpaid accounts payable." required></textarea><button class="button primary" type="submit">Run automation</button></form>
+        <div class="assistant-result" id="assistant-result" hidden></div>
+      </section>
     </aside>
     <main class="main">
       <header class="topbar">
@@ -272,8 +281,9 @@
   <dialog id="profile-dialog">
     <form method="dialog" class="modal" id="profile-form">
       <h2>Edit profile name</h2>
-      <div class="form-grid"><div class="form-field"><label for="profile-name">Full name</label><input id="profile-name" name="name" required maxlength="80"></div></div>
-      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save name</button></div>
+      <div class="form-grid"><div class="form-field"><label for="profile-name">Your name</label><input id="profile-name" name="name" required maxlength="80" placeholder="Enter your name"></div></div>
+      <p class="privacy-note">Your name is stored only on this device unless you connect a future cloud account.</p>
+      <div class="modal-actions"><button class="button" id="google-signin" type="button">Continue with Google</button><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save name</button></div>
     </form>
   </dialog>
   <dialog id="currency-dialog">
@@ -351,18 +361,18 @@
     ];
     const toast = message => { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200); };
     const persist = () => localStorage.setItem('mitraa-finance', JSON.stringify(state));
-    const profileName = () => state.profileName || 'Nallagatla Harikumar';
-    const profileNickname = () => state.profileNickname || 'Hari';
+    const profileName = () => state.profileName || '';
+    const profileNickname = () => state.profileNickname || profileName().split(/\s+/)[0] || 'there';
     const timeGreeting = () => {
       const hour = new Date().getHours();
       return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 21 ? 'Good evening' : 'Good night';
     };
     function renderProfile() {
       const name = profileName();
-      document.querySelector('.user-name').textContent = name;
+      document.querySelector('.user-name').textContent = name || 'Set your name';
       document.getElementById('time-greeting').textContent = timeGreeting();
       document.getElementById('profile-greeting').textContent = profileNickname();
-      document.querySelectorAll('.profile-initials').forEach(element => { element.textContent = name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(); });
+      document.querySelectorAll('.profile-initials').forEach(element => { element.textContent = name ? name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() : '?'; });
     }
     const localeCurrency = () => state.currency || currencies.find(([code, , locale]) => (navigator.language || '').toLowerCase().startsWith(locale.slice(0, 2).toLowerCase()))?.[0] || 'USD';
     const currencyInfo = () => currencies.find(([code]) => code === localeCurrency()) || currencies[0];
@@ -482,6 +492,17 @@
     function downloadData(filename, data, type) {
       const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
     }
+    function runAssistant(prompt) {
+      const query = prompt.toLowerCase();
+      const matches = Object.entries(pageConfig).filter(([key, [, title]]) => query.includes(key.replace('-', ' ')) || query.includes(title.toLowerCase().split(' ')[0]));
+      const pages = matches.length ? matches.map(([key]) => key) : Object.keys(pageConfig);
+      const records = pages.flatMap(page => state[page].map(record => ({page, record})));
+      const category = query.match(/(?:category|categor(?:y|ies)|food|travel|housing|transport|services|general)/i)?.[0];
+      const filtered = category && !/all|summary|summarize|everything/.test(query) ? records.filter(({record}) => Object.values(record).some(value => String(value).toLowerCase().includes(category.toLowerCase()))) : records;
+      const totals = filtered.reduce((sum, {record}) => sum + ['amount', 'value', 'balance', 'debit', 'credit', 'limit', 'spent'].reduce((total, key) => total + (Number(record[key]) || 0), 0), 0);
+      const lines = filtered.slice(0, 20).map(({page, record}) => `${pageConfig[page][0]}: ${Object.values(record).join(' | ')}`);
+      return `Found ${filtered.length} matching record${filtered.length === 1 ? '' : 's'} across ${pages.map(page => pageConfig[page][0]).join(', ')}.${totals ? `\nCombined numeric total: ${money(totals)}` : ''}\n\n${lines.join('\n') || 'No matching accounting records found.'}`;
+    }
     document.addEventListener('click', event => {
       const nav = event.target.closest('[data-page]'); if (nav) renderPage(nav.dataset.page);
       if (event.target.matches('[data-export-all]')) exportAllCsv();
@@ -577,6 +598,19 @@
     document.getElementById('overview-export').addEventListener('click', () => { currentPage = 'transactions'; exportCsv(); currentPage = 'overview'; });
     document.querySelector('.button.primary').addEventListener('click', event => { if (currentPage === 'overview') { event.preventDefault(); currentPage = 'transactions'; renderPage('transactions'); openForm(); } });
     document.getElementById('notifications').addEventListener('click', () => toast('No new notifications'));
+    let lastAssistantResult = '';
+    document.getElementById('assistant-form').addEventListener('submit', event => {
+      event.preventDefault();
+      lastAssistantResult = runAssistant(document.getElementById('assistant-prompt').value.trim());
+      const result = document.getElementById('assistant-result');
+      result.textContent = lastAssistantResult;
+      result.hidden = false;
+    });
+    document.getElementById('assistant-export').addEventListener('click', () => {
+      if (!lastAssistantResult) { toast('Run an accounting prompt first'); return; }
+      downloadData('finbucks-accounting-result.txt', lastAssistantResult, 'text/plain');
+    });
+    document.getElementById('google-signin').addEventListener('click', () => toast('Google sign-in needs an OAuth client and secure backend before it can be enabled'));
     function openProfileDialog() {
       document.getElementById('profile-name').value = profileName();
       profileDialog.showModal();
@@ -603,6 +637,7 @@
     renderProfile();
     renderCurrency();
     renderPage('overview');
+    if (!profileName()) setTimeout(openProfileDialog, 350);
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Offline app setup unavailable.', error)));
   </script>
 </body>
