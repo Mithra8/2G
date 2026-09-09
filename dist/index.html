@@ -473,15 +473,21 @@
     }
     const categorize = name => /food|grocery|market|restaurant|dining|cafe/i.test(name) ? 'Food' : /fuel|uber|taxi|transport/i.test(name) ? 'Transport' : /rent|utility|electric|internet/i.test(name) ? 'Housing' : /cloud|software|subscription/i.test(name) ? 'Services' : 'General';
     const parseStatement = text => text.split(/\r?\n/).map(line => {
-      const amount = line.match(/(?:₹|\$|USD|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)(?:\s*(?:DR|DEBIT|CR|CREDIT))?\s*$/i);
-      const date = line.match(/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/](?:20)?\d{2})\b/);
-      if (!amount || !date) return null;
-      const rawDate = date ? date[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10);
-      const normalizedDate = rawDate.length === 10 && rawDate.indexOf('-') === 4 ? rawDate : new Date(rawDate).toISOString().slice(0, 10);
-      const description = line.replace(amount[0], '').replace(date ? date[0] : '', '').replace(/[|,:-]+/g, ' ').trim() || 'Statement transaction';
-      const numericAmount = Number(amount[1].replace(/,/g, ''));
-      const isCredit = /\b(cr|credit|salary|deposit|refund)\b/i.test(line);
-      return {date: normalizedDate, description, category: categorize(description), amount: String(isCredit ? numericAmount : -numericAmount)};
+      const cleanLine = line.replace(/\t/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!cleanLine) return null;
+      const date = cleanLine.match(/\b(20\d{2}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.](?:20)?\d{2}|(?:\d{1,2}\s+)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[,\s]+\d{2,4})\b/i);
+      const amounts = [...cleanLine.matchAll(/(?:₹|rs\.?|inr|\$|usd)?\s*\(?-?\s*\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?\)?/gi)]
+        .map(match => ({text: match[0], value: Number(match[0].replace(/[₹$,\s()]/g, '').replace(/^(rs\.?|inr)/i, ''))}))
+        .filter(item => Number.isFinite(item.value) && item.value > 0);
+      if (!amounts.length) return null;
+      const amount = amounts[amounts.length - 1];
+      const rawDate = date ? date[1].replace(/[/.]/g, '-') : new Date().toISOString().slice(0, 10);
+      const parsedDate = new Date(rawDate);
+      const normalizedDate = Number.isNaN(parsedDate.getTime()) ? new Date().toISOString().slice(0, 10) : parsedDate.toISOString().slice(0, 10);
+      const description = cleanLine.replace(amount.text, '').replace(date ? date[0] : '', '').replace(/\b(?:DR|DEBIT|CR|CREDIT)\b/gi, '').replace(/[|,:-]+/g, ' ').trim() || 'Statement transaction';
+      const isCredit = /\b(cr|credit|salary|deposit|refund|received)\b/i.test(cleanLine);
+      const isDebit = /\b(dr|debit|withdrawal|paid|payment)\b/i.test(cleanLine);
+      return {date: normalizedDate, description, category: categorize(description), amount: String(isCredit && !isDebit ? amount.value : -amount.value)};
     }).filter(Boolean);
     const parseDetectedRows = text => text.split(/\r?\n/).map(line => {
       const parts = line.split('|').map(part => part.trim());
@@ -611,6 +617,31 @@
     });
     photoInput.addEventListener('change', event => {
       const file = event.target.files[0]; if (!file) return;
+      const isTextStatement = file.type === 'text/plain' || file.type === 'text/csv' || /\.(csv|txt)$/i.test(file.name);
+      if (isTextStatement) {
+        const textReader = new FileReader();
+        textReader.onload = () => {
+          const text = String(textReader.result || '');
+          pendingStatement = {name: file.name, dataUrl: `data:${file.type || 'text/plain'};charset=utf-8,${encodeURIComponent(text)}`};
+          document.getElementById('statement-name').value = file.name.replace(/\.[^.]+$/, '');
+          document.getElementById('ocr-status').textContent = 'Text statement loaded — review the detected rows before aligning.';
+          document.getElementById('ocr-text').value = text;
+          const rows = parseStatement(text);
+          showDetectedRows(rows);
+          if (rows.length) document.getElementById('ocr-status').textContent = `Detected ${rows.length} transaction${rows.length === 1 ? '' : 's'} — review and align them.`;
+          photoDialog.showModal();
+          document.getElementById('ocr-text').focus();
+        };
+        textReader.onerror = () => toast('The statement text could not be opened');
+        textReader.readAsText(file);
+        event.target.value = '';
+        return;
+      }
+      if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+        toast('PDF upload is not supported yet. Export the PDF page as an image or CSV first.');
+        event.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = async () => {
         pendingStatement = {name: file.name, dataUrl: reader.result};
