@@ -365,7 +365,7 @@
     const profileNickname = () => state.profileNickname || profileName().split(/\s+/)[0] || 'there';
     const timeGreeting = () => {
       const hour = new Date().getHours();
-      return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 21 ? 'Good evening' : 'Good night';
+      return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     };
     function renderProfile() {
       const name = profileName();
@@ -651,6 +651,10 @@
     renderCurrency();
     renderPage('overview');
     if (!profileName()) setTimeout(openProfileDialog, 350);
+    window.addEventListener('pagehide', () => {
+      const greeting = document.getElementById('time-greeting');
+      if (greeting && new Date().getHours() >= 21) greeting.textContent = 'Good night';
+    });
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Offline app setup unavailable.', error)));
   </script>
 </body>
