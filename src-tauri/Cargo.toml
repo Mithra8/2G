@@ -1,8 +1,8 @@
 [package]
 name = "finbucks"
 version = "1.0.0"
-description = "FINBUCKS personal finance workspace"
-authors = ["FINBUCKS"]
+description = "Asli Paisa AI accounting workspace"
+authors = ["Asli Paisa"]
 edition = "2021"
 
 [lib]

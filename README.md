@@ -1,6 +1,6 @@
-# FINBUCKS Finance
+# Asli Paisa Finance
 
-FINBUCKS is a local-first personal finance workspace for transactions, accounting sheets, receipt imports, automation, and CSV exports.
+Asli Paisa is a local-first AI accounting workspace for transactions, accounting statements, receipt imports, automation, and exports.
 
 ## Windows desktop application
 
