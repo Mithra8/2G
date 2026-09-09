@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FINBUCKS · Finance workspace</title>
+  <style>
+    :root {
+      --ink: #172233;
+      --muted: #788397;
+      --line: #e7ebf1;
+      --panel: #ffffff;
+      --canvas: #f7f8fb;
+      --navy: #15213b;
+      --navy-2: #1d2d4e;
+      --blue: #4263eb;
+      --blue-soft: #edf1ff;
+      --green: #1b9b6c;
+      --green-soft: #e7f7f0;
+      --orange: #e88a35;
+      --orange-soft: #fff3e6;
+      --red: #d75b67;
+      --shadow: 0 12px 30px rgba(27, 42, 70, .055);
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at 80% -10%, #eef2ff 0, transparent 34%), var(--canvas); color: var(--ink); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select, textarea { font: inherit; }
+    input, textarea, select { pointer-events: auto; user-select: text; }
+    button { border: 0; cursor: pointer; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 252px; flex: 0 0 252px; padding: 24px 14px 18px; background: linear-gradient(180deg, #15213b 0%, #111b31 100%); color: #d7deec; display: flex; flex-direction: column; box-shadow: 8px 0 30px rgba(20, 34, 59, .08); animation: sidebarEnter .65s cubic-bezier(.2,.8,.2,1) both; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 12px 30px; color: #fff; font-size: 19px; font-weight: 750; letter-spacing: -.03em; }
+    .brand-mark { position: relative; z-index: 0; display: grid; flex: 0 0 38px; place-items: center; width: 38px; height: 38px; overflow: hidden; border: 1px solid rgba(255,255,255,.3); border-radius: 13px; background: linear-gradient(145deg, #7e8fff 0%, #526cf2 48%, #26c49a 100%); color: #fff; box-shadow: 0 10px 24px rgba(66, 99, 235, .4), inset 0 1px rgba(255,255,255,.38); animation: markFloat 3.5s ease-in-out infinite; }
+    .brand-mark::after { content: ""; position: absolute; z-index: 0; inset: -35%; pointer-events: none; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.42) 48%, transparent 60%); transform: translateX(-75%) rotate(12deg); animation: logoShine 4.5s ease-in-out infinite; }
+    .brand-mark svg { position: relative; z-index: 1; display: block; flex: 0 0 auto; width: 25px; height: 25px; color: #fff; filter: drop-shadow(0 2px 2px rgba(16,27,65,.22)); }
+    .brand-mark svg path { vector-effect: non-scaling-stroke; }
+    .brand-name { background: linear-gradient(100deg, #fff 5%, #c9d2ff 52%, #7fe4c3 100%); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: "Segoe UI", "Arial Narrow", sans-serif; font-size: 20px; font-style: normal; font-weight: 800; letter-spacing: .075em; line-height: 1; text-shadow: 0 4px 16px rgba(114, 139, 255, .2); }
+    .workspace { margin: 0 8px 25px; padding: 11px 12px; border: 1px solid #334362; border-radius: 9px; color: #aebbd0; font-size: 11px; }
+    .workspace strong { display: block; margin-top: 3px; color: #fff; font-size: 13px; font-weight: 600; }
+    .nav-label { margin: 0 12px 9px; color: #7786a1; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    nav { display: grid; gap: 4px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border-radius: 8px; color: #aebbd0; background: transparent; text-align: left; transition: .2s ease; }
+    .nav-item:hover, .nav-item.active { background: linear-gradient(90deg, #24375e, #1d2d4e); color: #fff; box-shadow: inset 3px 0 #8ca2ff; transform: translateX(2px); }
+    .nav-icon { width: 19px; color: currentColor; font-size: 16px; text-align: center; }
+    .nav-item.active .nav-icon { color: #8ca2ff; }
+    .nav-badge { margin-left: auto; padding: 2px 7px; border-radius: 99px; background: #263b64; color: #9db1ff; font-size: 11px; }
+    .nav-section { margin: 22px 12px 9px; color: #7786a1; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .nav-item.compact { padding-top: 8px; padding-bottom: 8px; }
+    .sidebar-bottom { margin-top: auto; padding: 18px 8px 0; border-top: 1px solid #2b3a58; }
+    .help { display: flex; align-items: center; gap: 10px; padding: 10px 4px 0; color: #aebbd0; }
+    .profile-button { display: flex; align-items: center; gap: 10px; padding: 0; color: inherit; background: transparent; text-align: left; }
+    .avatar, .top-avatar { display: grid; place-items: center; border-radius: 50%; font-weight: 750; }
+    .avatar { width: 34px; height: 34px; background: #f0b778; color: #4d321e; font-size: 12px; }
+    .help small { display: block; color: #7e8ca7; font-size: 11px; }
+    .support-link { display: block; margin: 0 4px 12px; color: #aebbd0; font-size: 11px; text-decoration: none; }
+    .support-link:hover { color: #fff; text-decoration: underline; }
+    .support-box { margin: 0 4px 14px; }
+    .support-box summary { cursor: pointer; color: #aebbd0; font-size: 11px; }
+    .support-box summary:hover { color: #fff; }
+    .support-form { display: grid; gap: 7px; margin-top: 9px; }
+    .support-form input, .support-form textarea { width: 100%; padding: 7px 8px; border: 1px solid #334362; border-radius: 6px; color: #fff; background: #1d2d4e; font-size: 11px; }
+    .support-form textarea { min-height: 58px; resize: vertical; }
+    .support-form button { padding: 7px 8px; border-radius: 6px; color: #fff; background: #4263eb; font-size: 11px; font-weight: 650; }
+    .privacy-note { color: #7e8ca7; font-size: 10px; line-height: 1.35; }
+    .currency-link { display: block; margin: 0 4px 12px; color: #aebbd0; font-size: 11px; text-decoration: none; }
+    .currency-link:hover { color: #fff; text-decoration: underline; }
+    .currency-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 310px; overflow-y: auto; }
+    .currency-option { display: flex; align-items: center; gap: 8px; padding: 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #fff; text-align: left; }
+    .currency-option:hover, .currency-option.selected { border-color: var(--blue); background: var(--blue-soft); }
+    .currency-option small { display: block; color: var(--muted); }
+    .user-name { font-weight: 600; color: #fff; }
+    .main { min-width: 0; flex: 1; }
+    .topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 42px; border-bottom: 1px solid rgba(231,235,241,.9); background: rgba(255,255,255,.88); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 2; animation: fadeDown .55s ease both; }
+    .breadcrumb { color: var(--muted); font-size: 13px; }
+    .breadcrumb strong { color: var(--ink); font-weight: 650; }
+    .top-actions { display: flex; align-items: center; gap: 19px; }
+    .icon-btn { position: relative; width: 32px; height: 32px; background: transparent; color: #647188; font-size: 19px; }
+    .dot { position: absolute; top: 4px; right: 3px; width: 6px; height: 6px; border: 1px solid white; border-radius: 50%; background: #ee6875; }
+    .top-avatar { width: 34px; height: 34px; background: #dce5ff; color: #3e5bc8; }
+    .content { max-width: 1440px; margin: 0 auto; padding: 38px 42px 56px; }
+    .heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 30px; animation: contentEnter .65s .08s ease both; }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); letter-spacing: -.045em; line-height: 1.1; }
+    .heading p { margin: 5px 0 0; color: var(--muted); }
+    .heading-actions { display: flex; gap: 10px; }
+    .button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font-weight: 650; box-shadow: 0 2px 3px rgba(0,0,0,.02); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+    .button:hover { border-color: #b7c3df; box-shadow: 0 8px 18px rgba(27, 42, 70, .08); transform: translateY(-1px); }
+    .button:active { transform: translateY(0); }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(66,99,235,.25); outline-offset: 2px; }
+    .button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+    .card, .panel { border: 1px solid rgba(231,235,241,.92); border-radius: 14px; background: rgba(255,255,255,.94); box-shadow: var(--shadow); }
+    .card { padding: 20px; position: relative; overflow: hidden; animation: cardEnter .55s ease both; }
+    .card:nth-child(2) { animation-delay: .08s; }
+    .card:nth-child(3) { animation-delay: .16s; }
+    .card:nth-child(4) { animation-delay: .24s; }
+    .card::after { content: ""; position: absolute; right: -22px; top: -30px; width: 90px; height: 90px; border-radius: 50%; background: var(--blue-soft); opacity: .7; }
+    .card-label { color: var(--muted); font-size: 12px; }
+    .card-value { margin: 9px 0 7px; font-size: 25px; font-weight: 750; letter-spacing: -.04em; }
+    .trend { font-size: 12px; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .dashboard-grid { display: grid; grid-template-columns: 1.45fr 1fr; gap: 22px; }
+    .panel { padding: 22px; animation: contentEnter .65s .2s ease both; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .panel h2 { margin: 0; font-size: 16px; }
+    .panel select { border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; color: var(--muted); background: #fff; }
+    .chart { display: flex; align-items: end; gap: 13px; height: 194px; padding: 15px 4px 0; border-bottom: 1px solid var(--line); }
+    .bar-group { display: grid; flex: 1; gap: 8px; justify-items: center; color: var(--muted); font-size: 11px; }
+    .bar { width: min(34px, 80%); min-height: 18px; border-radius: 6px 6px 0 0; background: #b9c5ff; }
+    .bar.highlight { background: var(--blue); }
+    .transaction { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+    .transaction:last-child { border-bottom: 0; }
+    .transaction-icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 9px; background: var(--orange-soft); color: var(--orange); }
+    .transaction-main { min-width: 0; flex: 1; }
+    .transaction-main strong { display: block; }
+    .transaction-main small { color: var(--muted); }
+    .amount { font-weight: 700; }
+    .balance-list { display: grid; gap: 14px; }
+    .balance-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .balance-row span { color: var(--muted); }
+    .balance-row strong { font-size: 15px; }
+    .balance-row.total { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .balance-row.total span, .balance-row.total strong { color: var(--ink); font-weight: 750; }
+    .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .quick-link { padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--blue); background: var(--blue-soft); font-size: 12px; font-weight: 650; }
+    .sheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .sheet-card { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; text-align: left; transition: .2s ease; }
+    .sheet-card:hover { border-color: #b7c3df; box-shadow: var(--shadow); transform: translateY(-1px); }
+    .sheet-card-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--blue-soft); color: var(--blue); font-size: 17px; }
+    .sheet-card strong { display: block; }
+    .sheet-card small { display: block; margin-top: 2px; color: var(--muted); }
+    .export-list { display: grid; gap: 10px; }
+    .export-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .export-item:last-child { border-bottom: 0; }
+    .export-item strong { display: block; }
+    .export-item small { color: var(--muted); }
+    @media (max-width: 900px) { .sheet-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 620px) { .sheet-grid { grid-template-columns: 1fr; } }
+    .data-page { display: none; }
+    .data-page.visible { display: block; }
+    .data-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .data-toolbar h2 { margin: 0; font-size: 20px; }
+    .data-toolbar p { margin: 4px 0 0; color: var(--muted); }
+    .data-actions { display: flex; gap: 8px; }
+    .filename-input { min-width: 190px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fff; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+    td:last-child, th:last-child { text-align: right; }
+    .category-row td { padding: 10px 12px 7px; border-bottom: 0; background: #f6f8ff; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .category-row:first-child td { padding-top: 13px; }
+    .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
+    .icon-action { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--blue); background: #fff; font-size: 12px; }
+    .empty { padding: 32px; color: var(--muted); text-align: center; }
+    dialog { width: min(500px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 12px; box-shadow: 0 24px 80px rgba(20, 34, 59, .25); }
+    dialog::backdrop { background: rgba(21, 33, 59, .38); }
+    .modal { padding: 24px; }
+    .modal h2 { margin: 0 0 20px; }
+    .form-grid { display: grid; gap: 14px; }
+    .form-field { display: grid; gap: 5px; }
+    .form-field label { color: var(--muted); font-size: 12px; font-weight: 650; }
+    .form-field input, .form-field select, .form-field textarea { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #fff; }
+    .form-field textarea { min-height: 78px; resize: vertical; line-height: 1.45; }
+    .modal input, .modal textarea, .modal select { position: relative; z-index: 1; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 3; padding: 12px 16px; border-radius: 8px; background: var(--navy); color: white; box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); transition: .2s ease; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @keyframes sidebarEnter { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes contentEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes cardEnter { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes markFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    @keyframes logoShine { 0%, 55% { transform: translateX(-75%) rotate(12deg); } 78%, 100% { transform: translateX(75%) rotate(12deg); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+    .import-preview { display: grid; gap: 14px; }
+    .import-preview img { width: 100%; max-height: 180px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+    @media (max-width: 900px) {
+      .sidebar { width: 200px; flex-basis: 200px; }
+      .content, .topbar { padding-left: 24px; padding-right: 24px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .sidebar { display: none; }
+      .heading { display: block; }
+      .heading-actions { margin-top: 18px; }
+      .summary-grid { gap: 10px; }
+      .card { padding: 14px; }
+      .card-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M8 20.5 13 15l4 3 7-8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 10h2v2" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M7 24h18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span><span class="brand-name">FINBUCKS</span></div>
+      <div class="workspace">WORKSPACE<strong>Personal finance</strong></div>
+      <p class="nav-label">Workspace</p>
+      <nav aria-label="Primary navigation">
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-item" data-page="transactions"><span class="nav-icon">↔</span>Transactions <span class="nav-badge">12</span></button>
+        <button class="nav-item" data-page="budgets"><span class="nav-icon">◫</span>Budgets</button>
+        <button class="nav-item" data-page="reports"><span class="nav-icon">◷</span>Reports</button>
+        <button class="nav-item" data-page="exports"><span class="nav-icon">⇩</span>Exports</button>
+        <div class="nav-section">Accounting</div>
+        <button class="nav-item compact" data-page="accounting-sheets"><span class="nav-icon">▧</span>All accounting sheets</button>
+        <button class="nav-item compact" data-page="assets"><span class="nav-icon">▣</span>Assets</button>
+        <button class="nav-item compact" data-page="current-assets"><span class="nav-icon">▤</span>Current assets</button>
+        <button class="nav-item compact" data-page="liabilities"><span class="nav-icon">▥</span>Liabilities</button>
+        <button class="nav-item compact" data-page="expenses"><span class="nav-icon">◒</span>Expenses</button>
+        <button class="nav-item compact" data-page="ledger"><span class="nav-icon">≡</span>Ledger</button>
+        <button class="nav-item compact" data-page="equity"><span class="nav-icon">◆</span>Equity</button>
+        <button class="nav-item compact" data-page="balance-sheet"><span class="nav-icon">▦</span>Balance sheet</button>
+        <button class="nav-item compact" data-page="audit"><span class="nav-icon">✓</span>Audit</button>
+        <button class="nav-item compact" data-page="accounts-payable"><span class="nav-icon">◰</span>Accounts payable <span class="nav-badge">4</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <p class="nav-label">Support</p>
+        <a class="support-link" href="https://mail.google.com/mail/?view=cm&fs=1&to=nallagatlahari0@gmail.com" target="_blank" rel="noopener noreferrer">nallagatlahari0@gmail.com ↗</a>
+        <details class="support-box"><summary>Contact owner privately</summary><form class="support-form" id="support-form"><input name="subject" placeholder="Subject" required><textarea name="message" placeholder="How can we help?" required></textarea><span class="privacy-note">Opens a private Gmail draft addressed only to FINBUCKS support.</span><button type="submit">Open private support email</button></form></details>
+        <a class="currency-link" href="#" id="currency-settings">◎ Currency: <span id="currency-label">USD</span></a>
+        <div class="help"><button class="profile-button" id="profile-edit" aria-label="Edit profile"><span class="avatar profile-initials">NH</span><span><span class="user-name">Nallagatla Harikumar</span><small>Free plan</small></span></button></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></div>
+        <div class="top-actions"><button class="icon-btn" id="notifications" aria-label="Notifications">♧<span class="dot"></span></button><button class="top-avatar profile-initials" id="top-profile" aria-label="Edit profile">NH</button></div>
+      </header>
+      <section class="content" id="app-content">
+        <div class="heading">
+          <div><h1><span id="time-greeting">Good morning</span>, <span id="profile-greeting">Nallagatla Harikumar</span></h1><p>Here’s what’s happening with your money this month.</p></div>
+          <div class="heading-actions"><button class="button" id="photo-import">▧ Import photo</button><input id="photo-input" type="file" accept="image/*" hidden><button class="button" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary">＋ Add transaction</button></div>
+        </div>
+        <div class="summary-grid overview-only">
+          <article class="card"><div class="card-label">Total balance</div><div class="card-value">$24,580.00</div><div class="trend positive">↗ 8.4% from last month</div></article>
+          <article class="card"><div class="card-label">Income</div><div class="card-value">$8,420.00</div><div class="trend positive">↗ 4.2% from last month</div></article>
+          <article class="card"><div class="card-label">Expenses</div><div class="card-value">$3,180.00</div><div class="trend negative">↘ 2.1% from last month</div></article>
+          <article class="card"><div class="card-label">Savings rate</div><div class="card-value">62.2%</div><div class="trend positive">↗ 6.8% from last month</div></article>
+        </div>
+        <div class="dashboard-grid overview-only">
+          <section class="panel"><div class="panel-heading"><h2>Cash flow</h2><select aria-label="Cash flow period"><option>Last 6 months</option></select></div><div class="chart" aria-label="Cash flow chart"><div class="bar-group"><div class="bar" style="height: 53%"></div>Apr</div><div class="bar-group"><div class="bar" style="height: 68%"></div>May</div><div class="bar-group"><div class="bar" style="height: 47%"></div>Jun</div><div class="bar-group"><div class="bar" style="height: 79%"></div>Jul</div><div class="bar-group"><div class="bar" style="height: 61%"></div>Aug</div><div class="bar-group"><div class="bar highlight" style="height: 88%"></div>Sep</div></div></section>
+          <section class="panel"><div class="panel-heading"><h2>Recent transactions</h2><button class="button" data-page="transactions">View all</button></div><div class="transaction"><span class="transaction-icon">◈</span><span class="transaction-main"><strong>Salary deposit</strong><small>Today · Income</small></span><span class="amount positive" data-base-amount="6800"></span></div><div class="transaction"><span class="transaction-icon">⌁</span><span class="transaction-main"><strong>Groceries</strong><small>Yesterday · Essentials</small></span><span class="amount" data-base-amount="-84.20"></span></div><div class="transaction"><span class="transaction-icon">◉</span><span class="transaction-main"><strong>Cloud subscription</strong><small>Sep 6 · Services</small></span><span class="amount" data-base-amount="-24"></span></div><div class="transaction"><span class="transaction-icon">◇</span><span class="transaction-main"><strong>Weekend dining</strong><small>Sep 4 · Lifestyle</small></span><span class="amount" data-base-amount="-68.50"></span></div></section>
+          <section class="panel"><div class="panel-heading"><h2>Balance sheet snapshot</h2><button class="button" data-page="reports">Open report</button></div><div class="balance-list"><div class="balance-row"><span>Total assets</span><strong data-base-amount="38240"></strong></div><div class="balance-row"><span>Current assets</span><strong data-base-amount="24580"></strong></div><div class="balance-row"><span>Total liabilities</span><strong class="negative" data-base-amount="-9660"></strong></div><div class="balance-row total"><span>Owner’s equity</span><strong class="positive" data-base-amount="28580"></strong></div></div><div class="quick-links"><button class="quick-link" data-page="ledger">View ledger</button><button class="quick-link" data-page="audit">Review audit</button><button class="quick-link" data-page="accounts-payable">4 bills due</button></div></section>
+        </div>
+        <div id="data-page" class="data-page"></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="record-dialog">
+    <form method="dialog" class="modal" id="record-form">
+      <h2 id="form-title">Add record</h2>
+      <div class="form-grid" id="form-fields"></div>
+      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save record</button></div>
+    </form>
+  </dialog>
+  <dialog id="photo-dialog">
+    <form method="dialog" class="modal" id="photo-form">
+      <h2>Import receipt photo</h2>
+      <div class="import-preview"><img id="photo-preview" alt="Selected statement preview"><div class="form-field"><label for="statement-name">Statement file name</label><input id="statement-name" name="statement-name" placeholder="September bank statement"></div><p id="ocr-status" class="heading p">Reading the statement locally…</p><div class="form-field"><label for="ocr-text">Recognized statement text</label><textarea id="ocr-text" name="ocr-text" rows="5" placeholder="OCR text will appear here. You can correct it before aligning."></textarea></div><div class="form-field"><label for="statement-rows">Detected rows</label><textarea id="statement-rows" name="statement-rows" rows="4" placeholder="Detected rows will appear here."></textarea></div><div class="form-field"><label for="alignment-prompt">Alignment instructions</label><textarea id="alignment-prompt" name="alignment-prompt" rows="2" placeholder="Optional: e.g. Put all grocery purchases in Food."></textarea><small class="privacy-note">Instructions are applied locally before rows are added to Transactions.</small></div></div>
+      <div class="modal-actions"><button class="button" id="cancel-photo" type="button">Cancel</button><button class="button primary" id="align-statement" type="button">✦ AI align statement</button></div>
+    </form>
+  </dialog>
+  <dialog id="profile-dialog">
+    <form method="dialog" class="modal" id="profile-form">
+      <h2>Edit profile name</h2>
+      <div class="form-grid"><div class="form-field"><label for="profile-name">Full name</label><input id="profile-name" name="name" required maxlength="80"></div></div>
+      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save name</button></div>
+    </form>
+  </dialog>
+  <dialog id="currency-dialog">
+    <form method="dialog" class="modal" id="currency-form">
+      <h2>Currency and country</h2>
+      <p class="heading p">FINBUCKS detected your locale as <strong id="locale-label"></strong>. Choose the accounting currency for this workspace. Amounts are stored and displayed directly in the selected currency; no USD conversion is applied.</p>
+      <div class="currency-grid" id="currency-options"></div>
+      <div class="modal-actions"><button class="button" value="cancel">Cancel</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    const pageConfig = {
+      transactions: ['Transactions', 'Track income and spending.', ['Date', 'Description', 'Category', 'Amount'], ['date', 'description', 'category', 'amount']],
+      budgets: ['Budgets', 'Set targets and monitor your categories.', ['Name', 'Period', 'Limit', 'Spent'], ['name', 'period', 'limit', 'spent']],
+      reports: ['Reports', 'Generate and export financial summaries.', ['Report', 'Period', 'Status'], ['report', 'period', 'status']],
+      assets: ['Assets', 'Manage owned resources and long-term holdings.', ['Name', 'Type', 'Value', 'Status'], ['name', 'type', 'value', 'status']],
+      'current-assets': ['Current assets', 'Monitor cash, inventory, and receivables.', ['Name', 'Account', 'Balance', 'Status'], ['name', 'account', 'balance', 'status']],
+      liabilities: ['Liabilities', 'Track obligations and outstanding balances.', ['Name', 'Type', 'Balance', 'Due date'], ['name', 'type', 'balance', 'due']],
+      expenses: ['Expenses', 'Review operating costs and spending.', ['Date', 'Vendor', 'Category', 'Amount'], ['date', 'vendor', 'category', 'amount']],
+      ledger: ['Ledger', 'Review every debit and credit entry.', ['Date', 'Account', 'Debit', 'Credit'], ['date', 'account', 'debit', 'credit']],
+      equity: ['Equity', 'Track owner contributions and retained earnings.', ['Date', 'Description', 'Account', 'Amount'], ['date', 'description', 'account', 'amount']],
+      'balance-sheet': ['Balance sheet', 'View the accounting equation at a glance.', ['Account', 'Type', 'Debit', 'Credit'], ['account', 'type', 'debit', 'credit']],
+      audit: ['Audit', 'Review controls, activity, and exceptions.', ['Date', 'Event', 'User', 'Status'], ['date', 'event', 'user', 'status']],
+      'accounts-payable': ['Accounts payable', 'Manage vendor bills and payment deadlines.', ['Vendor', 'Invoice', 'Due date', 'Amount'], ['vendor', 'invoice', 'due', 'amount']]
+    };
+    const accountingSheets = [
+      ['assets', '▣', 'Assets', 'Long-term resources and holdings'],
+      ['current-assets', '▤', 'Current assets', 'Cash, inventory, and receivables'],
+      ['liabilities', '▥', 'Liabilities', 'Loans and outstanding obligations'],
+      ['expenses', '◒', 'Expenses', 'Operating costs and spending'],
+      ['ledger', '≡', 'General ledger', 'All debits and credits'],
+      ['equity', '◆', 'Equity', 'Contributions and retained earnings'],
+      ['balance-sheet', '▦', 'Balance sheet', 'Assets, liabilities, and equity'],
+      ['accounts-payable', '◰', 'Accounts payable', 'Vendor bills and due dates'],
+      ['audit', '✓', 'Audit log', 'Controls, activity, and exceptions'],
+      ['transactions', '↔', 'Transactions', 'Income and spending records'],
+      ['budgets', '◫', 'Budgets', 'Limits and category targets'],
+      ['reports', '◷', 'Reports', 'Financial summaries and exports']
+    ];
+    const seed = {
+      transactions: [{date: '2026-09-09', description: 'Salary deposit', category: 'Income', amount: '+6800'}],
+      reports: [{report: 'Monthly finance summary', period: 'September 2026', status: 'Ready'}],
+      'accounts-payable': [{vendor: 'Cloud services', invoice: 'INV-1042', due: '2026-09-18', amount: '240'}],
+      assets: [{name: 'Emergency fund', type: 'Cash', value: '12000', status: 'Active'}],
+      liabilities: [{name: 'Credit card', type: 'Short-term', balance: '9660', due: '2026-09-25'}]
+    };
+    const state = JSON.parse(localStorage.getItem('mitraa-finance') || '{}');
+    if (!Array.isArray(state.statementFiles)) state.statementFiles = [];
+    const fallbackRates = {USD: 1, EUR: .92, GBP: .79, INR: 83.5, JPY: 149.5, CNY: 7.2, AUD: 1.52, CAD: 1.36, SGD: 1.34, AED: 3.67, SAR: 3.75, ZAR: 18.2, CHF: .88, NZD: 1.65, HKD: 7.82, KRW: 1335, BRL: 5.05, MXN: 17.2, THB: 35.7, TRY: 33.8, NOK: 10.7, SEK: 10.5, DKK: 6.85, PLN: 3.98};
+    state.rates = state.rates || fallbackRates;
+    state.rateUpdatedAt = state.rateUpdatedAt || null;
+    Object.keys(pageConfig).forEach(key => { if (!Array.isArray(state[key])) state[key] = seed[key] || []; });
+    if (!state.reports.length) state.reports = seed.reports;
+    let currentPage = 'overview';
+    let editingIndex = null;
+    let pendingStatement = null;
+    const dataPage = document.getElementById('data-page');
+    const dialog = document.getElementById('record-dialog');
+    const form = document.getElementById('record-form');
+    const photoDialog = document.getElementById('photo-dialog');
+    const photoForm = document.getElementById('photo-form');
+    const photoInput = document.getElementById('photo-input');
+    const profileDialog = document.getElementById('profile-dialog');
+    const profileForm = document.getElementById('profile-form');
+    const currencyDialog = document.getElementById('currency-dialog');
+    const currencies = [
+      ['USD', 'United States Dollar', 'en-US'], ['EUR', 'Euro', 'de-DE'], ['GBP', 'British Pound', 'en-GB'], ['INR', 'Indian Rupee', 'en-IN'],
+      ['JPY', 'Japanese Yen', 'ja-JP'], ['CNY', 'Chinese Yuan', 'zh-CN'], ['AUD', 'Australian Dollar', 'en-AU'], ['CAD', 'Canadian Dollar', 'en-CA'],
+      ['SGD', 'Singapore Dollar', 'en-SG'], ['AED', 'UAE Dirham', 'ar-AE'], ['SAR', 'Saudi Riyal', 'ar-SA'], ['ZAR', 'South African Rand', 'en-ZA'],
+      ['CHF', 'Swiss Franc', 'de-CH'], ['NZD', 'New Zealand Dollar', 'en-NZ'], ['HKD', 'Hong Kong Dollar', 'zh-HK'], ['KRW', 'South Korean Won', 'ko-KR'],
+      ['BRL', 'Brazilian Real', 'pt-BR'], ['MXN', 'Mexican Peso', 'es-MX'], ['THB', 'Thai Baht', 'th-TH'], ['TRY', 'Turkish Lira', 'tr-TR'],
+      ['NOK', 'Norwegian Krone', 'nb-NO'], ['SEK', 'Swedish Krona', 'sv-SE'], ['DKK', 'Danish Krone', 'da-DK'], ['PLN', 'Polish Zloty', 'pl-PL']
+    ];
+    const toast = message => { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200); };
+    const persist = () => localStorage.setItem('mitraa-finance', JSON.stringify(state));
+    const profileName = () => state.profileName || 'Nallagatla Harikumar';
+    const profileNickname = () => state.profileNickname || 'Hari';
+    const timeGreeting = () => {
+      const hour = new Date().getHours();
+      return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 21 ? 'Good evening' : 'Good night';
+    };
+    function renderProfile() {
+      const name = profileName();
+      document.querySelector('.user-name').textContent = name;
+      document.getElementById('time-greeting').textContent = timeGreeting();
+      document.getElementById('profile-greeting').textContent = profileNickname();
+      document.querySelectorAll('.profile-initials').forEach(element => { element.textContent = name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(); });
+    }
+    const localeCurrency = () => state.currency || currencies.find(([code, , locale]) => (navigator.language || '').toLowerCase().startsWith(locale.slice(0, 2).toLowerCase()))?.[0] || 'USD';
+    const currencyInfo = () => currencies.find(([code]) => code === localeCurrency()) || currencies[0];
+    const rate = () => 1;
+    const money = value => Number(value) ? new Intl.NumberFormat(currencyInfo()[2], {style: 'currency', currency: currencyInfo()[0]}).format(Number(value)) : value || '—';
+    async function updateExchangeRate(code) {
+      if (code === 'USD') { state.rates.USD = 1; state.rateUpdatedAt = new Date().toISOString(); persist(); return; }
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!response.ok) throw new Error(`Rate service returned ${response.status}`);
+        const payload = await response.json();
+        if (!payload.rates || !Number(payload.rates[code])) throw new Error(`No USD rate available for ${code}`);
+        state.rates[code] = Number(payload.rates[code]);
+        state.rateUpdatedAt = new Date().toISOString();
+      } catch (error) {
+        state.rates[code] = fallbackRates[code] || 1;
+        state.rateUpdatedAt = null;
+        console.warn('Live exchange rate unavailable; using fallback rate.', error);
+      }
+      persist();
+    }
+    const signedMoney = value => {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) return value || '—';
+      return `${numericValue > 0 ? '+' : numericValue < 0 ? '−' : ''}${money(Math.abs(numericValue))}`;
+    };
+    function renderCurrency() {
+      document.getElementById('currency-label').textContent = `${localeCurrency()} · Base currency`;
+      document.getElementById('locale-label').textContent = navigator.language || 'default browser locale';
+      document.querySelectorAll('.currency-option').forEach(option => option.classList.toggle('selected', option.dataset.currency === localeCurrency()));
+      document.querySelectorAll('.card-value').forEach(card => { if (card.dataset.amount) card.textContent = money(card.dataset.amount); });
+      document.querySelectorAll('[data-base-amount]').forEach(element => { element.textContent = signedMoney(element.dataset.baseAmount); });
+    }
+    function openCurrencyDialog() {
+      document.getElementById('currency-options').innerHTML = currencies.map(([code, name]) => `<button type="button" class="currency-option${code === localeCurrency() ? ' selected' : ''}" data-currency="${code}"><strong>${code}</strong><span>${name}<small>${new Intl.NumberFormat(undefined, {style: 'currency', currency: code}).format(1234.56)}</small></span></button>`).join('');
+      renderCurrency(); currencyDialog.showModal();
+    }
+    const categorize = name => /food|grocery|market|restaurant|dining|cafe/i.test(name) ? 'Food' : /fuel|uber|taxi|transport/i.test(name) ? 'Transport' : /rent|utility|electric|internet/i.test(name) ? 'Housing' : /cloud|software|subscription/i.test(name) ? 'Services' : 'General';
+    const parseStatement = text => text.split(/\r?\n/).map(line => {
+      const amount = line.match(/(?:₹|\$|USD|INR)?\s*([0-9,]+(?:\.[0-9]{1,2})?)(?:\s*(?:DR|DEBIT|CR|CREDIT))?\s*$/i);
+      const date = line.match(/\b(20\d{2}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/](?:20)?\d{2})\b/);
+      if (!amount || !date) return null;
+      const rawDate = date ? date[1].replace(/\//g, '-') : new Date().toISOString().slice(0, 10);
+      const normalizedDate = rawDate.length === 10 && rawDate.indexOf('-') === 4 ? rawDate : new Date(rawDate).toISOString().slice(0, 10);
+      const description = line.replace(amount[0], '').replace(date ? date[0] : '', '').replace(/[|,:-]+/g, ' ').trim() || 'Statement transaction';
+      const numericAmount = Number(amount[1].replace(/,/g, ''));
+      const isCredit = /\b(cr|credit|salary|deposit|refund)\b/i.test(line);
+      return {date: normalizedDate, description, category: categorize(description), amount: String(isCredit ? numericAmount : -numericAmount)};
+    }).filter(Boolean);
+    const parseDetectedRows = text => text.split(/\r?\n/).map(line => {
+      const parts = line.split('|').map(part => part.trim());
+      if (parts.length < 4 || !parts[0] || !parts[1] || !parts[3]) return null;
+      const amount = Number(parts[3].replace(/[^0-9.-]/g, ''));
+      if (!Number.isFinite(amount)) return null;
+      return {date: parts[0], description: parts[1], category: parts[2] || categorize(parts[1]), amount: String(amount)};
+    }).filter(Boolean);
+    const showDetectedRows = rows => { document.getElementById('statement-rows').value = rows.map(row => `${row.date} | ${row.description} | ${row.category} | ${row.amount}`).join('\n'); };
+    function refreshSummary() {
+      const transactions = state.transactions;
+      const income = transactions.filter(item => Number(item.amount) > 0).reduce((sum, item) => sum + Number(item.amount), 0);
+      const expenses = transactions.filter(item => Number(item.amount) < 0).reduce((sum, item) => sum + Math.abs(Number(item.amount)), 0);
+      const cards = document.querySelectorAll('.summary-grid .card-value');
+      if (cards.length) { cards[0].textContent = money(24580); cards[1].textContent = money(income); cards[2].textContent = money(expenses); cards[3].textContent = income ? `${((income - expenses) / income * 100).toFixed(1)}%` : '0.0%'; }
+    }
+    function renderPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.nav-item[data-page]').forEach(item => item.classList.toggle('active', item.dataset.page === page));
+      document.querySelectorAll('.overview-only').forEach(el => el.style.display = page === 'overview' ? '' : 'none');
+      if (page === 'overview') { dataPage.classList.remove('visible'); document.querySelector('.breadcrumb strong').textContent = 'Overview'; refreshSummary(); return; }
+      if (page === 'accounting-sheets') {
+        document.querySelector('.breadcrumb strong').textContent = 'All accounting sheets';
+        dataPage.classList.add('visible');
+        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>All accounting sheets</h2><p>Open any register, statement, or control sheet from one place.</p></div><div class="data-actions"><button class="button" data-export-all>Export all CSV</button></div></div><div class="panel"><div class="sheet-grid">${accountingSheets.map(([key, icon, title, description]) => `<button class="sheet-card" data-page="${key}"><span class="sheet-card-icon">${icon}</span><span><strong>${title}</strong><small>${description}</small></span></button>`).join('')}</div></div>`;
+        return;
+      }
+      if (page === 'exports') {
+        document.querySelector('.breadcrumb strong').textContent = 'Exports';
+        dataPage.classList.add('visible');
+        const statements = state.statementFiles.map((file, index) => `<div class="export-item"><span><strong>${file.name}</strong><small>Imported ${new Date(file.importedAt).toLocaleString()} · ${file.rows} aligned rows</small></span><button class="button" data-download-statement="${index}">Download statement</button></div>`).join('');
+        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Exports & statement files</h2><p>Download accounting data or original statement files imported into FINBUCKS.</p></div><div class="data-actions"><input class="filename-input" id="export-filename" value="finbucks-export" aria-label="Export file name"><button class="button" data-export-json>Download full backup</button></div></div><div class="panel"><div class="panel-heading"><h2>Accounting exports</h2></div><div class="quick-links"><button class="quick-link" data-export-page="transactions">Transactions CSV</button><button class="quick-link" data-export-page="expenses">Expenses CSV</button><button class="quick-link" data-export-page="ledger">Ledger CSV</button><button class="quick-link" data-export-page="accounts-payable">Payables CSV</button></div><div class="panel-heading" style="margin-top:26px"><h2>Imported statement files</h2></div><div class="export-list">${statements || '<div class="empty">No statement files imported yet.</div>'}</div></div>`;
+        return;
+      }
+      const [title, description, columns, keys] = pageConfig[page];
+      document.querySelector('.breadcrumb strong').textContent = title;
+      dataPage.classList.add('visible');
+      const grouped = state[page].reduce((groups, record, index) => {
+        const category = record.category || record.type || record.account || 'Uncategorized';
+        (groups[category] ||= []).push({record, index});
+        return groups;
+      }, {});
+      const rows = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([category, records]) => `<tr class="category-row"><td colspan="${columns.length + 1}">${category} · ${records.length} ${records.length === 1 ? 'entry' : 'entries'}</td></tr>${records.map(({record, index}) => `<tr>${keys.map(key => `<td>${key === 'amount' || key === 'value' || key === 'balance' || key === 'limit' || key === 'spent' || key === 'debit' || key === 'credit' ? money(record[key]) : (record[key] || '—')}</td>`).join('')}<td><span class="row-actions"><button class="icon-action" data-edit="${index}">Edit</button><button class="icon-action" data-delete="${index}">Delete</button></span></td></tr>`).join('')}`).join('');
+      dataPage.innerHTML = `<div class="data-toolbar"><div><h2>${title}</h2><p>${description} Monetary values are entered and stored directly in ${localeCurrency()}. Records are grouped by category.</p></div><div class="data-actions"><button class="button" data-export>Export CSV</button><button class="button primary" data-add>Add record</button></div></div><div class="panel table-wrap"><table><thead><tr>${columns.map(column => `<th>${column}</th>`).join('')}<th>Actions</th></tr></thead><tbody>${rows || `<tr><td class="empty" colspan="${columns.length + 1}">No records yet. Add your first record.</td></tr>`}</tbody></table></div>`;
+    }
+    function openForm(index = null) {
+      editingIndex = index;
+      const [title, , , keys] = pageConfig[currentPage];
+      const record = index === null ? {} : state[currentPage][index];
+      document.getElementById('form-title').textContent = `${index === null ? 'Add' : 'Edit'} ${title.toLowerCase()} record`;
+      document.getElementById('form-fields').innerHTML = keys.map(key => `<div class="form-field"><label for="field-${key}">${key.replace('-', ' ').replace(/\b\w/g, char => char.toUpperCase())}</label><input id="field-${key}" name="${key}" value="${record[key] || ''}" required></div>`).join('');
+      dialog.showModal();
+      document.getElementById('form-fields').querySelector('input, textarea, select')?.focus();
+    }
+    function exportCsv() {
+      const [title, , columns, keys] = pageConfig[currentPage];
+      const csv = [columns, ...state[currentPage].map(record => keys.map(key => `"${String(record[key] || '').replace(/"/g, '""')}"`))].map(row => row.join(',')).join('\n');
+      const baseName = (document.getElementById('export-filename')?.value || title).trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
+      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'})); link.download = `${baseName || title.toLowerCase().replace(/ /g, '-')}.csv`; link.click(); URL.revokeObjectURL(link.href); toast(`${title} exported`);
+    }
+    function exportAllCsv() {
+      Object.keys(pageConfig).forEach(page => {
+        currentPage = page;
+        exportCsv();
+      });
+      renderPage('accounting-sheets');
+      toast('All accounting sheets exported');
+    }
+    function downloadData(filename, data, type) {
+      const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([data], {type})); link.download = filename; link.click(); URL.revokeObjectURL(link.href);
+    }
+    document.addEventListener('click', event => {
+      const nav = event.target.closest('[data-page]'); if (nav) renderPage(nav.dataset.page);
+      if (event.target.matches('[data-export-all]')) exportAllCsv();
+      if (event.target.matches('[data-export-json]')) { const baseName = (document.getElementById('export-filename')?.value || 'finbucks-backup').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-'); downloadData(`${baseName || 'finbucks-backup'}.json`, JSON.stringify(state, null, 2), 'application/json'); toast('Full backup downloaded'); }
+      if (event.target.matches('[data-export-page]')) { currentPage = event.target.dataset.exportPage; exportCsv(); renderPage('exports'); }
+      const statement = event.target.closest('[data-download-statement]');
+      if (statement) { const file = state.statementFiles[Number(statement.dataset.downloadStatement)]; if (file) { const link = document.createElement('a'); link.href = file.dataUrl; link.download = file.name; link.click(); toast('Statement downloaded'); } }
+      if (event.target.matches('[data-add]')) openForm();
+      if (event.target.matches('[data-export]')) exportCsv();
+      const edit = event.target.closest('[data-edit]'); if (edit) openForm(Number(edit.dataset.edit));
+      const remove = event.target.closest('[data-delete]'); if (remove && confirm('Delete this record?')) { state[currentPage].splice(Number(remove.dataset.delete), 1); persist(); renderPage(currentPage); toast('Record deleted'); }
+    });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const record = Object.fromEntries(new FormData(form).entries());
+      if (editingIndex === null) state[currentPage].push(record); else state[currentPage][editingIndex] = record;
+      persist(); dialog.close(); renderPage(currentPage); toast('Record saved');
+    });
+    photoInput.addEventListener('change', event => {
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        pendingStatement = {name: file.name, dataUrl: reader.result};
+        document.getElementById('photo-preview').src = reader.result;
+        document.getElementById('statement-name').value = file.name.replace(/\.[^.]+$/, '');
+        document.getElementById('ocr-status').textContent = 'Reading statement locally…';
+        let text = '';
+        if (!window.Tesseract) {
+          document.getElementById('ocr-status').textContent = 'OCR is unavailable offline. Paste the statement text below, then align it.';
+        } else {
+          try {
+            const result = await Tesseract.recognize(file, 'eng', { logger: message => { if (message.status === 'recognizing text') document.getElementById('ocr-status').textContent = `Reading statement… ${Math.round((message.progress || 0) * 100)}%`; } });
+            text = result.data.text || '';
+          } catch (error) {
+            console.warn('Statement OCR failed; opening manual review.', error);
+            document.getElementById('ocr-status').textContent = 'OCR could not read this image. Paste or correct the statement text below, then align it.';
+          }
+        }
+        document.getElementById('ocr-text').value = text;
+        const rows = parseStatement(text);
+        showDetectedRows(rows);
+        if (rows.length) document.getElementById('ocr-status').textContent = `Detected ${rows.length} transaction${rows.length === 1 ? '' : 's'} — review and align them.`;
+        photoDialog.showModal();
+        document.getElementById('ocr-text').focus();
+      };
+      reader.onerror = () => {
+        pendingStatement = null;
+        document.getElementById('ocr-status').textContent = 'The image could not be opened. Please choose another file.';
+        photoDialog.showModal();
+        document.getElementById('ocr-text').focus();
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    });
+    function alignStatement() {
+      const rows = parseStatement(document.getElementById('ocr-text').value);
+      const reviewedRows = parseDetectedRows(document.getElementById('statement-rows').value);
+      const prompt = document.getElementById('alignment-prompt').value.trim();
+      const categoryInstruction = prompt.match(/(?:category|categorize|classify)[^a-z0-9]+(.+?)(?:\.|$)/i);
+      const requestedCategory = categoryInstruction ? categoryInstruction[1].trim().replace(/\s+/g, ' ') : '';
+      const alignedRows = (reviewedRows.length ? reviewedRows : rows).map(row => requestedCategory ? {...row, category: requestedCategory} : row);
+      if (!alignedRows.length) { toast('No statement rows found. Add rows in the review box first.'); return; }
+      alignedRows.forEach(item => {
+        state.transactions.push(item);
+        if (Number(item.amount) < 0) state.expenses.push({date: item.date, vendor: item.description, category: item.category, amount: String(Math.abs(Number(item.amount)))});
+        state.ledger.push({date: item.date, account: item.category, debit: Number(item.amount) < 0 ? String(Math.abs(Number(item.amount))) : '0', credit: Number(item.amount) > 0 ? item.amount : '0'});
+      });
+      if (pendingStatement) {
+        const customName = document.getElementById('statement-name').value.trim();
+        state.statementFiles.push({name: `${customName || pendingStatement.name.replace(/\.[^.]+$/, '')}${/\.[a-z0-9]+$/i.test(customName) ? '' : '.statement'}`, dataUrl: pendingStatement.dataUrl, importedAt: new Date().toISOString(), rows: alignedRows.length});
+        pendingStatement = null;
+      }
+      persist(); photoDialog.close(); refreshSummary(); renderPage('transactions'); toast(`${alignedRows.length} statement rows aligned and added to Transactions`);
+    }
+    document.getElementById('align-statement').addEventListener('click', alignStatement);
+    document.getElementById('cancel-photo').addEventListener('click', () => { pendingStatement = null; photoDialog.close(); });
+    photoForm.addEventListener('submit', event => { event.preventDefault(); alignStatement(); });
+    document.getElementById('photo-import').addEventListener('click', () => photoInput.click());
+    document.getElementById('run-automation').addEventListener('click', () => {
+      let updated = 0;
+      state.transactions.forEach(item => {
+        const amount = Number(item.amount);
+        if (!item.category) { item.category = categorize(item.description || ''); updated++; }
+        if (amount < 0 && !state.expenses.some(expense => expense.date === item.date && expense.vendor === item.description && Number(expense.amount) === Math.abs(amount))) {
+          state.expenses.push({date: item.date, vendor: item.description, category: item.category, amount: String(Math.abs(amount))}); updated++;
+        }
+        if (!state.ledger.some(entry => entry.date === item.date && entry.account === item.category && Number(entry.debit || 0) === Math.max(0, Math.abs(amount)))) {
+          state.ledger.push({date: item.date, account: item.category, debit: amount < 0 ? String(Math.abs(amount)) : '0', credit: amount > 0 ? String(amount) : '0'}); updated++;
+        }
+      });
+      persist(); refreshSummary(); toast(updated ? `Automation updated ${updated} entries` : 'Everything is already up to date');
+    });
+    document.getElementById('overview-export').addEventListener('click', () => { currentPage = 'transactions'; exportCsv(); currentPage = 'overview'; });
+    document.querySelector('.button.primary').addEventListener('click', event => { if (currentPage === 'overview') { event.preventDefault(); currentPage = 'transactions'; renderPage('transactions'); openForm(); } });
+    document.getElementById('notifications').addEventListener('click', () => toast('No new notifications'));
+    function openProfileDialog() {
+      document.getElementById('profile-name').value = profileName();
+      profileDialog.showModal();
+      document.getElementById('profile-name').focus();
+    }
+    document.getElementById('profile-edit').addEventListener('click', openProfileDialog);
+    document.getElementById('top-profile').addEventListener('click', openProfileDialog);
+    document.getElementById('currency-settings').addEventListener('click', event => { event.preventDefault(); openCurrencyDialog(); });
+    document.getElementById('currency-options').addEventListener('click', event => {
+      const option = event.target.closest('[data-currency]'); if (!option) return;
+      state.currency = option.dataset.currency; persist(); renderCurrency(); refreshSummary(); renderPage(currentPage); currencyDialog.close(); toast(`${state.currency} is now the workspace base currency`);
+    });
+    document.getElementById('support-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const url = `https://mail.google.com/mail/?view=cm&fs=1&to=nallagatlahari0@gmail.com&su=${encodeURIComponent(values.subject)}&body=${encodeURIComponent(values.message)}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    });
+    profileForm.addEventListener('submit', event => {
+      event.preventDefault();
+      state.profileName = new FormData(profileForm).get('name').trim();
+      persist(); renderProfile(); profileDialog.close(); toast('Profile name updated');
+    });
+    renderProfile();
+    renderCurrency();
+    renderPage('overview');
+  </script>
+</body>
+</html>

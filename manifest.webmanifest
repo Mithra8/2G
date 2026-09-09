@@ -1,0 +1,19 @@
+{
+  "name": "FINBUCKS Finance Workspace",
+  "short_name": "FINBUCKS",
+  "description": "Professional finance and accounting workspace.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fb",
+  "theme_color": "#15213b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/finbucks.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
