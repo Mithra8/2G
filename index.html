@@ -366,7 +366,8 @@
       liabilities: [{name: 'Credit card', type: 'Short-term', balance: '9660', due: '2026-09-25'}]
     };
     const state = JSON.parse(localStorage.getItem('mitraa-finance') || '{}');
-    state.perspective = state.perspective === 'customer' ? 'customer' : 'developer';
+    const ownerDeveloperPasscode = 'dopamine';
+    state.perspective = 'customer';
     if (!Array.isArray(state.statementFiles)) state.statementFiles = [];
     const fallbackRates = {USD: 1, EUR: .92, GBP: .79, INR: 83.5, JPY: 149.5, CNY: 7.2, AUD: 1.52, CAD: 1.36, SGD: 1.34, AED: 3.67, SAR: 3.75, ZAR: 18.2, CHF: .88, NZD: 1.65, HKD: 7.82, KRW: 1335, BRL: 5.05, MXN: 17.2, THB: 35.7, TRY: 33.8, NOK: 10.7, SEK: 10.5, DKK: 6.85, PLN: 3.98};
     state.rates = state.rates || fallbackRates;
@@ -404,6 +405,16 @@
       if (subtitle) subtitle.textContent = state.perspective === 'customer'
         ? 'Customer view for reviewing financial statements, reports, and downloads.'
         : 'Developer workspace for accounting operations and customer support.';
+    }
+    function authorizeDeveloperMode() {
+      if (sessionStorage.getItem('asli-paisa-developer-authorized') === 'true') return true;
+      const entered = window.prompt('Owner authorization required. Enter the Developer mode passcode:');
+      if (entered !== ownerDeveloperPasscode) {
+        toast('Developer mode authorization failed');
+        return false;
+      }
+      sessionStorage.setItem('asli-paisa-developer-authorized', 'true');
+      return true;
     }
     const profileName = () => state.profileName || '';
     const profileNickname = () => state.profileNickname || profileName().split(/\s+/)[0] || 'there';
@@ -687,7 +698,13 @@
     document.querySelector('.button.primary').addEventListener('click', event => { if (currentPage === 'overview') { event.preventDefault(); currentPage = 'transactions'; renderPage('transactions'); openForm(); } });
     document.getElementById('notifications').addEventListener('click', () => toast('No new notifications'));
     document.getElementById('perspective-select').addEventListener('change', event => {
-      state.perspective = event.target.value === 'customer' ? 'customer' : 'developer';
+      if (event.target.value === 'developer' && !authorizeDeveloperMode()) {
+        event.target.value = 'customer';
+        state.perspective = 'customer';
+        applyPerspective();
+        return;
+      }
+      state.perspective = event.target.value === 'developer' ? 'developer' : 'customer';
       persist();
       applyPerspective();
       toast(`${state.perspective === 'customer' ? 'Customer' : 'Developer'} view enabled`);
