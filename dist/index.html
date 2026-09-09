@@ -280,10 +280,10 @@
   </dialog>
   <dialog id="profile-dialog">
     <form method="dialog" class="modal" id="profile-form">
-      <h2>Edit profile name</h2>
-      <div class="form-grid"><div class="form-field"><label for="profile-name">Your name</label><input id="profile-name" name="name" required maxlength="80" placeholder="Enter your name"></div></div>
-      <p class="privacy-note">Your name is stored only on this device unless you connect a future cloud account.</p>
-      <div class="modal-actions"><button class="button" id="google-signin" type="button">Continue with Google</button><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save name</button></div>
+      <h2>Edit profile</h2>
+      <div class="form-grid"><div class="form-field"><label for="profile-name">Full name</label><input id="profile-name" name="name" required maxlength="80" placeholder="Enter your name"></div><div class="form-field"><label for="profile-nickname">Nickname for greetings</label><input id="profile-nickname" name="nickname" maxlength="40" placeholder="Optional nickname"></div></div>
+      <p class="privacy-note">Your profile is stored only on this device unless you connect a future cloud account.</p>
+      <div class="modal-actions"><button class="button" id="google-signin" type="button">Continue with Google</button><button class="button" value="cancel">Cancel</button><button class="button primary" value="save">Save profile</button></div>
     </form>
   </dialog>
   <dialog id="currency-dialog">
@@ -613,6 +613,7 @@
     document.getElementById('google-signin').addEventListener('click', () => toast('Google sign-in needs an OAuth client and secure backend before it can be enabled'));
     function openProfileDialog() {
       document.getElementById('profile-name').value = profileName();
+      document.getElementById('profile-nickname').value = state.profileNickname || '';
       profileDialog.showModal();
       document.getElementById('profile-name').focus();
     }
@@ -631,8 +632,20 @@
     });
     profileForm.addEventListener('submit', event => {
       event.preventDefault();
-      state.profileName = new FormData(profileForm).get('name').trim();
-      persist(); renderProfile(); profileDialog.close(); toast('Profile name updated');
+      const values = Object.fromEntries(new FormData(profileForm).entries());
+      const name = String(values.name || '').trim();
+      const nickname = String(values.nickname || '').trim();
+      if (!name) {
+        document.getElementById('profile-name').focus();
+        toast('Enter your name before saving');
+        return;
+      }
+      state.profileName = name;
+      state.profileNickname = nickname || name.split(/\s+/)[0];
+      persist();
+      renderProfile();
+      profileDialog.close();
+      toast('Profile updated');
     });
     renderProfile();
     renderCurrency();
