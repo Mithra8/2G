@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#15213b">
   <meta name="description" content="Asli Paisa AI accounting workspace">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./icons/finbucks.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icons/finbucks.svg">
+  <link rel="icon" href="./icons/asli-paisa.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/asli-paisa.svg">
   <title>Asli Paisa · AI accounting workspace</title>
   <style>
     :root {
@@ -548,7 +548,7 @@
         document.querySelector('.breadcrumb strong').textContent = 'Exports';
         dataPage.classList.add('visible');
         const statements = state.statementFiles.map((file, index) => `<div class="export-item"><span><strong>${file.name}</strong><small>Imported ${new Date(file.importedAt).toLocaleString()} · ${file.rows} aligned rows</small></span><button class="button" data-download-statement="${index}">Download statement</button></div>`).join('');
-        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Exports & statement files</h2><p>Download accounting data or original statement files imported into FINBUCKS.</p></div><div class="data-actions"><input class="filename-input" id="export-filename" value="finbucks-export" aria-label="Export file name"><button class="button" data-export-json>Download full backup</button></div></div><div class="panel"><div class="panel-heading"><h2>Accounting exports</h2></div><div class="quick-links"><button class="quick-link" data-export-page="transactions">Transactions CSV</button><button class="quick-link" data-export-page="expenses">Expenses CSV</button><button class="quick-link" data-export-page="ledger">Ledger CSV</button><button class="quick-link" data-export-page="accounts-payable">Payables CSV</button></div><div class="panel-heading" style="margin-top:26px"><h2>Excel and Tally downloads</h2></div><div class="quick-links"><button class="quick-link" data-export-excel="transactions">Excel workbook</button><button class="quick-link" data-export-tally="transactions">Tally XML</button><button class="quick-link" data-export-excel="ledger">Ledger Excel</button><button class="quick-link" data-export-tally="ledger">Ledger Tally XML</button></div><div class="panel-heading" style="margin-top:26px"><h2>Imported statement files</h2></div><div class="export-list">${statements || '<div class="empty">No statement files imported yet.</div>'}</div></div>`;
+        dataPage.innerHTML = `<div class="data-toolbar"><div><h2>Exports & statement files</h2><p>Download accounting data or original statement files imported into Asli Paisa.</p></div><div class="data-actions"><input class="filename-input" id="export-filename" value="asli-paisa-export" aria-label="Export file name"><button class="button" data-export-json>Download full backup</button></div></div><div class="panel"><div class="panel-heading"><h2>Accounting exports</h2></div><div class="quick-links"><button class="quick-link" data-export-page="transactions">Transactions CSV</button><button class="quick-link" data-export-page="expenses">Expenses CSV</button><button class="quick-link" data-export-page="ledger">Ledger CSV</button><button class="quick-link" data-export-page="accounts-payable">Payables CSV</button></div><div class="panel-heading" style="margin-top:26px"><h2>Excel and Tally downloads</h2></div><div class="quick-links"><button class="quick-link" data-export-excel="transactions">Excel workbook</button><button class="quick-link" data-export-tally="transactions">Tally XML</button><button class="quick-link" data-export-excel="ledger">Ledger Excel</button><button class="quick-link" data-export-tally="ledger">Ledger Tally XML</button></div><div class="panel-heading" style="margin-top:26px"><h2>Imported statement files</h2></div><div class="export-list">${statements || '<div class="empty">No statement files imported yet.</div>'}</div></div>`;
         return;
       }
       const [title, description, columns, keys] = pageConfig[page];
@@ -682,7 +682,7 @@
       const [title, , columns, keys] = pageConfig[page];
       const entries = state[page].map(record => `<TALLYMESSAGE><LEDGER NAME="${escapeXml(record.account || record.vendor || record.description || title)}"><NAME>${escapeXml(record.account || record.vendor || record.description || title)}</NAME><ISBILLWISEON>No</ISBILLWISEON><DESCRIPTION>${escapeXml(keys.map(key => `${key}: ${record[key] || ''}`).join(' | '))}</DESCRIPTION><AMOUNT>${escapeXml(record.amount || record.value || record.balance || record.debit || record.credit || '0')}</AMOUNT></LEDGER></TALLYMESSAGE>`).join('');
       const xml = `<?xml version="1.0" encoding="UTF-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
-      downloadData(`finbucks-${page}-tally.xml`, xml, 'application/xml;charset=utf-8');
+      downloadData(`asli-paisa-${page}-tally.xml`, xml, 'application/xml;charset=utf-8');
       toast(`${title} Tally XML downloaded to your device`);
     }
     function runAssistant(prompt) {
@@ -699,7 +699,7 @@
     document.addEventListener('click', event => {
       const nav = event.target.closest('[data-page]'); if (nav) renderPage(nav.dataset.page);
       if (event.target.matches('[data-export-all]')) exportAllCsv();
-      if (event.target.matches('[data-export-json]')) { const baseName = (document.getElementById('export-filename')?.value || 'finbucks-backup').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-'); downloadData(`${baseName || 'finbucks-backup'}.json`, JSON.stringify(state, null, 2), 'application/json'); toast('Full backup downloaded'); }
+      if (event.target.matches('[data-export-json]')) { const baseName = (document.getElementById('export-filename')?.value || 'asli-paisa-backup').trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-'); downloadData(`${baseName || 'asli-paisa-backup'}.json`, JSON.stringify(state, null, 2), 'application/json'); toast('Full backup downloaded'); }
       if (event.target.matches('[data-export-page]')) { currentPage = event.target.dataset.exportPage; exportCsv(); renderPage('exports'); }
       if (event.target.matches('[data-export-excel]')) exportExcel(event.target.dataset.exportExcel);
       if (event.target.matches('[data-export-tally]')) exportTally(event.target.dataset.exportTally);
@@ -894,7 +894,7 @@
     });
     document.getElementById('assistant-export').addEventListener('click', () => {
       if (!lastAssistantResult) { toast('Run an accounting prompt first'); return; }
-      downloadData('finbucks-accounting-result.txt', lastAssistantResult, 'text/plain');
+      downloadData('asli-paisa-accounting-result.txt', lastAssistantResult, 'text/plain');
     });
     document.getElementById('google-signin').addEventListener('click', () => toast('Google sign-in needs an OAuth client and secure backend before it can be enabled'));
     function openProfileDialog() {

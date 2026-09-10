@@ -1,3 +1,3 @@
 fn main() {
-    finbucks_lib::run();
+    asli_paisa_lib::run();
 }

@@ -1,4 +1,4 @@
-name: Deploy FINBUCKS to GitHub Pages
+name: Deploy Asli Paisa to GitHub Pages
 
 on:
   push:

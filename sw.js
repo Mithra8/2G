@@ -1,5 +1,5 @@
-const CACHE_NAME = 'finbucks-shell-v1';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/finbucks.svg'];
+const CACHE_NAME = 'asli-paisa-shell-v1';
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/asli-paisa.svg'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));

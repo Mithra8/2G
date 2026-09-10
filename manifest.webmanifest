@@ -10,7 +10,7 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "./icons/finbucks.svg",
+      "src": "./icons/asli-paisa.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

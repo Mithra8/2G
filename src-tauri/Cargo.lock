@@ -991,7 +991,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "finbucks"
+name = "asli-paisa"
 version = "1.0.0"
 dependencies = [
  "tauri",

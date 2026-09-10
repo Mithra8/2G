@@ -1,12 +1,12 @@
 [package]
-name = "finbucks"
+name = "asli-paisa"
 version = "1.0.0"
 description = "Asli Paisa AI accounting workspace"
 authors = ["Asli Paisa"]
 edition = "2021"
 
 [lib]
-name = "finbucks_lib"
+name = "asli_paisa_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
