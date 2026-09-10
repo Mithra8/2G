@@ -681,10 +681,21 @@
     }
     function exportTally(page) {
       const [title, , columns, keys] = pageConfig[page];
-      const entries = state[page].map(record => `<TALLYMESSAGE><LEDGER NAME="${escapeXml(record.account || record.vendor || record.description || title)}"><NAME>${escapeXml(record.account || record.vendor || record.description || title)}</NAME><ISBILLWISEON>No</ISBILLWISEON><DESCRIPTION>${escapeXml(keys.map(key => `${key}: ${record[key] || ''}`).join(' | '))}</DESCRIPTION><AMOUNT>${escapeXml(record.amount || record.value || record.balance || record.debit || record.credit || '0')}</AMOUNT></LEDGER></TALLYMESSAGE>`).join('');
-      const xml = `<?xml version="1.0" encoding="UTF-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME></REQUESTDESC><REQUESTDATA>${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+      const records = page === 'balance-sheet'
+        ? (() => { const totals = balanceSheetTotals(); return [...totals.assets.map(item => ({account: item.name, type: 'Assets', amount: item.value})), ...totals.liabilities.map(item => ({account: item.name, type: 'Liabilities & Equity', amount: item.value}))]; })()
+        : state[page];
+      const orderedRecords = [...records].sort((a, b) => exportCategory(a).localeCompare(exportCategory(b)) || String(a.date || a.period || a.name || '').localeCompare(String(b.date || b.period || b.name || '')));
+      const entries = orderedRecords.map((record, index) => {
+        const category = exportCategory(record);
+        const ledgerName = record.account || record.vendor || record.description || record.name || `${title} ${index + 1}`;
+        const numericAmount = record.amount || record.value || record.balance || record.debit || record.credit || record.profit || '0';
+        const details = [`Category: ${category}`, ...keys.map(key => `${key}: ${record[key] || ''}`)].join(' | ');
+        return `<TALLYMESSAGE><LEDGER NAME="${escapeXml(ledgerName)}"><NAME>${escapeXml(ledgerName)}</NAME><PARENT>${escapeXml(category)}</PARENT><ISBILLWISEON>No</ISBILLWISEON><DESCRIPTION>${escapeXml(details)}</DESCRIPTION><AMOUNT>${escapeXml(numericAmount)}</AMOUNT></LEDGER></TALLYMESSAGE>`;
+      }).join('');
+      const categories = [...new Set(orderedRecords.map(exportCategory))].sort((a, b) => a.localeCompare(b)).map(category => `<CATEGORY>${escapeXml(category)}</CATEGORY>`).join('');
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>All Masters</REPORTNAME><STATICVARIABLES><SVCURRENTCOMPANY>Asli Paisa</SVCURRENTCOMPANY></STATICVARIABLES></REQUESTDESC><REQUESTDATA>${categories}${entries}</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
       downloadData(`asli-paisa-${page}-tally.xml`, xml, 'application/xml;charset=utf-8');
-      toast(`${title} Tally XML downloaded to your device`);
+      toast(`${title} Tally XML downloaded with categorized entries`);
     }
     function runAssistant(prompt) {
       const query = prompt.toLowerCase();
