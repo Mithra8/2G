@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asli-paisa-shell-v1';
+const CACHE_NAME = 'asli-paisa-shell-v2';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/asli-paisa.svg'];
 
 self.addEventListener('install', event => {
