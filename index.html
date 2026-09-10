@@ -302,7 +302,7 @@
   <dialog id="photo-dialog">
     <form method="dialog" class="modal" id="photo-form">
       <h2>Import receipt photo</h2>
-      <div class="import-preview"><img id="photo-preview" alt="Selected statement preview"><div class="form-field"><label for="statement-name">Statement file name</label><input id="statement-name" name="statement-name" placeholder="September bank statement"></div><p id="ocr-status" class="heading p">Reading the statement locally…</p><div class="form-field"><label for="ocr-text">Recognized statement text</label><textarea id="ocr-text" name="ocr-text" rows="5" placeholder="OCR text will appear here. You can correct it before aligning."></textarea></div><div class="form-field"><label for="statement-rows">Detected rows</label><textarea id="statement-rows" name="statement-rows" rows="4" placeholder="Detected rows will appear here."></textarea></div><div class="form-field"><label for="alignment-prompt">Alignment instructions</label><textarea id="alignment-prompt" name="alignment-prompt" rows="2" placeholder="Optional: e.g. Put all grocery purchases in Food."></textarea><small class="privacy-note">Instructions are applied locally before rows are added to Transactions.</small></div></div>
+      <div class="import-preview"><img id="photo-preview" alt="Selected statement preview"><div class="form-field"><label for="statement-name">Statement file name</label><input id="statement-name" name="statement-name" placeholder="September bank statement"></div><div class="form-field"><label for="import-destination">Transfer imported data to</label><select id="import-destination"><option value="transactions">Transactions</option><option value="balance-sheet">Balance sheet</option><option value="expenses">Expenses</option><option value="ledger">Ledger</option><option value="reconciliation">Reconciliation</option><option value="assets">Assets</option><option value="liabilities">Liabilities</option><option value="accounts-payable">Accounts payable</option></select><small class="privacy-note">Choose the exact register before aligning. Imported rows are not copied to other registers unless you select that destination.</small></div><p id="ocr-status" class="heading p">Reading the statement locally…</p><div class="form-field"><label for="ocr-text">Recognized statement text</label><textarea id="ocr-text" name="ocr-text" rows="5" placeholder="OCR text will appear here. You can correct it before aligning."></textarea></div><div class="form-field"><label for="statement-rows">Detected rows</label><textarea id="statement-rows" name="statement-rows" rows="4" placeholder="Detected rows will appear here."></textarea></div><div class="form-field"><label for="alignment-prompt">Alignment instructions</label><textarea id="alignment-prompt" name="alignment-prompt" rows="2" placeholder="Optional: e.g. Send these to Balance sheet as Assets."></textarea><small class="privacy-note">Instructions are applied locally before rows are added.</small></div></div>
       <div class="modal-actions"><button class="button" id="cancel-photo" type="button">Cancel</button><button class="button primary" id="align-statement" type="button">✦ AI align statement</button></div>
     </form>
   </dialog>
@@ -584,12 +584,14 @@
     const exportNumberKeys = ['amount', 'value', 'balance', 'limit', 'spent', 'debit', 'credit', 'book', 'statement', 'period', 'expense', 'bookValue', 'income', 'expenses', 'profit', 'change'];
     function balanceSheetTotals() {
       const assets = [
+        ...state['balance-sheet'].filter(item => String(item.type).toLowerCase() === 'asset').map(item => ({name: item.account || 'Asset', value: Number(item.debit) || 0, adjustment: 'Imported balance-sheet entry'})),
         ...state.assets.map(item => ({name: item.name || 'Asset', value: Number(item.value) || 0, adjustment: ''})),
         ...state['current-assets'].map(item => ({name: item.name || item.account || 'Current asset', value: Number(item.balance) || 0, adjustment: ''})),
         ...state.depreciation.map(item => ({name: `${item.asset || 'Asset'} (net)`, value: Number(item.bookValue) || Math.max(0, (Number(item.value) || 0) - (Number(item.expense) || 0)), adjustment: 'Depreciation applied'})),
         ...state.amortization.map(item => ({name: `${item.asset || 'Deferred cost'} (remaining)`, value: Number(item.remaining) || 0, adjustment: 'Amortization applied'}))
       ];
       const liabilities = [
+        ...state['balance-sheet'].filter(item => String(item.type).toLowerCase() !== 'asset').map(item => ({name: item.account || 'Liability / Equity', value: Number(item.credit) || 0, adjustment: 'Imported balance-sheet entry'})),
         ...state.liabilities.map(item => ({name: item.name || 'Liability', value: Number(item.balance) || 0, adjustment: ''})),
         ...state['accounts-payable'].map(item => ({name: item.vendor || 'Payable', value: Number(item.amount) || 0, adjustment: ''})),
         ...state.equity.map(item => ({name: item.description || item.account || 'Stockholders equity', value: Number(item.amount) || 0, adjustment: ''}))
@@ -793,21 +795,35 @@
       const rows = parseStatement(document.getElementById('ocr-text').value);
       const reviewedRows = parseDetectedRows(document.getElementById('statement-rows').value);
       const prompt = document.getElementById('alignment-prompt').value.trim();
+      const destination = document.getElementById('import-destination').value;
       const categoryInstruction = prompt.match(/(?:category|categorize|classify)[^a-z0-9]+(.+?)(?:\.|$)/i);
       const requestedCategory = categoryInstruction ? categoryInstruction[1].trim().replace(/\s+/g, ' ') : '';
       const alignedRows = (reviewedRows.length ? reviewedRows : rows).map(row => requestedCategory ? {...row, category: requestedCategory} : row);
       if (!alignedRows.length) { toast('No statement rows found. Add rows in the review box first.'); return; }
       alignedRows.forEach(item => {
-        state.transactions.push(item);
-        if (Number(item.amount) < 0) state.expenses.push({date: item.date, vendor: item.description, category: item.category, amount: String(Math.abs(Number(item.amount)))});
-        state.ledger.push({date: item.date, account: item.category, debit: Number(item.amount) < 0 ? String(Math.abs(Number(item.amount))) : '0', credit: Number(item.amount) > 0 ? item.amount : '0'});
+        const amount = Number(item.amount) || 0;
+        const description = item.description || 'Imported entry';
+        const category = item.category || requestedCategory || 'Uncategorized';
+        if (destination === 'transactions') state.transactions.push({...item, category});
+        if (destination === 'expenses') state.expenses.push({date: item.date, vendor: description, category, amount: String(Math.abs(amount))});
+        if (destination === 'ledger') state.ledger.push({date: item.date, account: category, debit: amount < 0 ? String(Math.abs(amount)) : '0', credit: amount > 0 ? String(amount) : '0'});
+        if (destination === 'reconciliation') state.reconciliation.push({date: item.date, account: category, book: String(Math.abs(amount)), statement: String(Math.abs(amount)), status: 'Matched'});
+        if (destination === 'assets') state.assets.push({name: description, type: category, value: String(Math.abs(amount)), status: 'Imported'});
+        if (destination === 'liabilities') state.liabilities.push({name: description, type: category, balance: String(Math.abs(amount)), due: item.date});
+        if (destination === 'accounts-payable') state['accounts-payable'].push({vendor: description, invoice: `IMPORTED-${item.date}`, due: item.date, amount: String(Math.abs(amount))});
+        if (destination === 'balance-sheet') {
+          const lower = `${prompt} ${category} ${description}`.toLowerCase();
+          if (/\b(liabilit|payable|loan|debt|credit card)\b/.test(lower)) state['balance-sheet'].push({account: description, type: 'Liability', debit: '0', credit: String(Math.abs(amount))});
+          else if (/\b(equity|capital|stockholder|shareholder|owner)\b/.test(lower)) state['balance-sheet'].push({account: description, type: 'Stockholders equity', debit: '0', credit: String(Math.abs(amount))});
+          else state['balance-sheet'].push({account: description, type: 'Asset', debit: String(Math.abs(amount)), credit: '0'});
+        }
       });
       if (pendingStatement) {
         const customName = document.getElementById('statement-name').value.trim();
         state.statementFiles.push({name: `${customName || pendingStatement.name.replace(/\.[^.]+$/, '')}${/\.[a-z0-9]+$/i.test(customName) ? '' : '.statement'}`, dataUrl: pendingStatement.dataUrl, importedAt: new Date().toISOString(), rows: alignedRows.length});
         pendingStatement = null;
       }
-      persist(); photoDialog.close(); refreshSummary(); renderPage('transactions'); toast(`${alignedRows.length} statement rows aligned and added to Transactions`);
+      persist(); photoDialog.close(); refreshSummary(); renderPage(destination); toast(`${alignedRows.length} rows aligned into ${pageConfig[destination]?.[0] || 'Balance sheet'}`);
     }
     document.getElementById('align-statement').addEventListener('click', alignStatement);
     document.getElementById('cancel-photo').addEventListener('click', () => { pendingStatement = null; photoDialog.close(); });
