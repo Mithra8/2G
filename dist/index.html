@@ -174,6 +174,7 @@
     .highlight-d { background: #ffe1e8; }
     .file-picker { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px dashed #9aa8c5; border-radius: 8px; color: var(--blue); background: var(--blue-soft); cursor: pointer; font-weight: 650; }
     .file-picker:hover { border-color: var(--blue); }
+    .camera-preview { display: block; width: 100%; max-height: 52vh; border-radius: 10px; background: #101827; object-fit: cover; }
     @media (max-width: 700px) { .balance-columns { grid-template-columns: 1fr; } }
     .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
     .icon-action { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--blue); background: #fff; font-size: 12px; }
@@ -304,6 +305,14 @@
       <div class="modal-actions"><button class="button" id="cancel-photo" type="button">Cancel</button><button class="button primary" id="align-statement" type="button">✦ AI align statement</button></div>
     </form>
   </dialog>
+  <dialog id="camera-dialog">
+    <form method="dialog" class="modal" id="camera-form">
+      <h2>Capture with back camera</h2>
+      <video id="camera-preview" class="camera-preview" autoplay playsinline muted></video>
+      <p id="camera-status" class="privacy-note">Allow camera access when your browser asks. The image is processed locally.</p>
+      <div class="modal-actions"><button class="button" id="cancel-camera" type="button">Cancel</button><button class="button primary" id="take-photo" type="button">Capture statement</button></div>
+    </form>
+  </dialog>
   <dialog id="profile-dialog">
     <form method="dialog" class="modal" id="profile-form">
       <h2>Edit profile</h2>
@@ -395,6 +404,9 @@
     const photoDialog = document.getElementById('photo-dialog');
     const photoForm = document.getElementById('photo-form');
     const photoInput = document.getElementById('photo-input');
+    const cameraDialog = document.getElementById('camera-dialog');
+    const cameraPreview = document.getElementById('camera-preview');
+    let cameraStream = null;
     const profileDialog = document.getElementById('profile-dialog');
     const profileForm = document.getElementById('profile-form');
     const currencyDialog = document.getElementById('currency-dialog');
@@ -796,10 +808,44 @@
       photoInput.click();
     });
     document.getElementById('camera-capture').addEventListener('click', () => {
-      photoInput.setAttribute('capture', 'environment');
-      photoInput.setAttribute('accept', 'image/*');
-      photoInput.setAttribute('data-camera-facing', 'back');
-      photoInput.click();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('Camera access is unavailable. Use HTTPS and enable camera permission in browser settings.');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: 'environment'}, width: {ideal: 1920}, height: {ideal: 1080}}, audio: false}).then(stream => {
+        cameraStream = stream;
+        cameraPreview.srcObject = stream;
+        document.getElementById('camera-status').textContent = 'Back camera ready. Position the statement and capture it.';
+        cameraDialog.showModal();
+      }).catch(error => {
+        console.warn('Camera permission failed.', error);
+        toast(error.name === 'NotAllowedError' ? 'Camera permission was denied. Enable camera access for this site.' : 'Unable to open the back camera.');
+      });
+    });
+    document.getElementById('cancel-camera').addEventListener('click', () => {
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      cameraPreview.srcObject = null;
+      cameraDialog.close();
+    });
+    document.getElementById('take-photo').addEventListener('click', () => {
+      if (!cameraStream) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = cameraPreview.videoWidth || 1280;
+      canvas.height = cameraPreview.videoHeight || 720;
+      canvas.getContext('2d').drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        if (!blob) { toast('The camera image could not be captured'); return; }
+        if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+        cameraPreview.srcObject = null;
+        cameraDialog.close();
+        const file = new File([blob], `camera-statement-${Date.now()}.jpg`, {type: 'image/jpeg'});
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        photoInput.files = transfer.files;
+        photoInput.dispatchEvent(new Event('change', {bubbles: true}));
+      }, 'image/jpeg', .92);
     });
     document.getElementById('run-automation').addEventListener('click', () => {
       let updated = 0;
