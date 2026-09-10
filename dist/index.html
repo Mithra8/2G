@@ -271,7 +271,7 @@
       <section class="content" id="app-content">
         <div class="heading">
           <div><h1><span id="time-greeting">Good morning</span>, <span id="profile-greeting">there</span></h1><p id="perspective-subtitle">Developer workspace for accounting operations and customer support.</p></div>
-          <div class="heading-actions"><label class="file-picker" for="photo-input">▧ Choose file</label><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" hidden><button class="button" id="camera-capture" type="button">⌾ Use camera</button><button class="button" id="photo-import">Import data</button><button class="button developer-only" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary customer-action">＋ Add transaction</button></div>
+          <div class="heading-actions"><label class="file-picker" for="photo-input">▧ Choose file</label><input id="photo-input" type="file" accept="image/*,.csv,.txt,.pdf" capture="environment" hidden><button class="button" id="camera-capture" type="button">⌾ Use back camera</button><button class="button" id="photo-import">Import data</button><button class="button developer-only" id="run-automation">✦ Run automation</button><button class="button" id="overview-export">↓ Export</button><button class="button primary customer-action">＋ Add transaction</button></div>
         </div>
         <div class="summary-grid overview-only">
           <article class="card"><div class="card-label">Total balance</div><div class="card-value">$24,580.00</div><div class="trend positive">↗ 8.4% from last month</div></article>
@@ -798,6 +798,7 @@
     document.getElementById('camera-capture').addEventListener('click', () => {
       photoInput.setAttribute('capture', 'environment');
       photoInput.setAttribute('accept', 'image/*');
+      photoInput.setAttribute('data-camera-facing', 'back');
       photoInput.click();
     });
     document.getElementById('run-automation').addEventListener('click', () => {
